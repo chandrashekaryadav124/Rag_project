@@ -1,0 +1,10 @@
+venv/
+.env
+__pycache__/
+*.pyc
+vectorstore/
+my_rag_env/
+
+
+certificate/
+certificate/*
