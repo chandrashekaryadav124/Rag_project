@@ -5,6 +5,9 @@
 
 import os
 import time
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from contextlib import asynccontextmanager
 
@@ -15,6 +18,16 @@ from pydantic import BaseModel, Field
 
 from app.generation import generate_answer
 from app.retrieval import get_database_info
+
+from app.orchestration.hybrid_generation import generate_hybrid_answer
+
+
+from fastapi import Depends
+from app.core.auth import get_current_principal
+from app.core.permissions import require_roles
+from app.core.security import UserPrincipal, UserRole
+
+from app.api.role_data import router as role_data_router
 
 
 # ==========================================
@@ -52,6 +65,7 @@ app = FastAPI(
 # ==========================================
 # CORS
 # ==========================================
+app.include_router(role_data_router)
 
 allowed_origins = os.getenv(
     "ALLOWED_ORIGINS",
@@ -84,6 +98,34 @@ class ChatRequest(BaseModel):
     )
 
 
+
+class HybridChatRequest(BaseModel):
+
+    question: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000
+    )
+
+    include_own_orders: bool = False
+
+class SellerHybridChatRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=2000)
+    include_own_products: bool = True
+
+class SupportHybridChatRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=2000)
+    order_id: str | None = None
+    include_support_tickets: bool = True
+
+class OperationsHybridChatRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=2000)
+    order_id: str | None = None
+    include_inventory_overview: bool = True
+
+class AdminHybridChatRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=2000)
+    include_system_analytics: bool = True
 # ==========================================
 # HOME ENDPOINT
 # ==========================================
@@ -185,6 +227,365 @@ def customer_chat(request: ChatRequest):
             status_code=500,
             detail="Unable to generate an answer. Please try again."
         )
+
+
+
+
+# ==========================================
+# AUTHENTICATED CUSTOMER HYBRID CHAT
+# ==========================================
+
+@app.post("/api/v1/hybrid-chat")
+def authenticated_hybrid_chat(
+    request: HybridChatRequest,
+    user: UserPrincipal = Depends(
+        require_roles(UserRole.CUSTOMER)
+    )
+):
+
+    start_time = time.perf_counter()
+
+    question = request.question.strip()
+
+    if not question:
+        raise HTTPException(
+            status_code=400,
+            detail="Question cannot be empty."
+        )
+
+    try:
+
+        # Only retrieve the customer's own orders
+        # when explicitly requested.
+        task = (
+            "own_orders"
+            if request.include_own_orders
+            else None
+        )
+
+        result = generate_hybrid_answer(
+            principal=user,
+            question=question,
+            task=task,
+        )
+
+        response_time = round(
+            time.perf_counter() - start_time,
+            2
+        )
+
+        return {
+            "question": question,
+            "answer": result["answer"],
+            "role": result["role"],
+            "sources": result["sources"],
+            "found_context": result["found_context"],
+            "retrieval_time": result["retrieval_time"],
+            "generation_time": result["generation_time"],
+            "response_time": response_time,
+        }
+
+    except PermissionError as error:
+
+        raise HTTPException(
+            status_code=403,
+            detail=str(error)
+        )
+
+    except ValueError as error:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+    except Exception as error:
+
+        print("Hybrid generation error:", str(error))
+
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to generate a hybrid answer. Please try again."
+        )
+
+
+@app.post("/api/v1/seller/hybrid-chat")
+def authenticated_seller_hybrid_chat(
+    request: SellerHybridChatRequest,
+    user: UserPrincipal = Depends(
+        require_roles(UserRole.SELLER)
+    )
+):
+    start_time = time.perf_counter()
+
+    question = request.question.strip()
+
+    if not question:
+        raise HTTPException(
+            status_code=400,
+            detail="Question cannot be empty."
+        )
+
+    task = (
+        "own_products"
+        if request.include_own_products
+        else None
+    )
+
+    result = generate_hybrid_answer(
+        principal=user,
+        question=question,
+        task=task,
+    )
+
+    response_time = round(
+        time.perf_counter() - start_time,
+        2
+    )
+
+    return {
+        "question": question,
+        "answer": result["answer"],
+        "role": result["role"],
+        "sources": result["sources"],
+        "found_context": result["found_context"],
+        "retrieval_time": result["retrieval_time"],
+        "generation_time": result["generation_time"],
+        "response_time": response_time,
+    }
+
+
+# ==========================================
+# AUTHENTICATED SUPPORT HYBRID CHAT
+# ==========================================
+
+@app.post("/api/v1/support/hybrid-chat")
+def authenticated_support_hybrid_chat(
+    request: SupportHybridChatRequest,
+    user: UserPrincipal = Depends(
+        require_roles(UserRole.SUPPORT)
+    )
+):
+    start_time = time.perf_counter()
+
+    question = request.question.strip()
+
+    if not question:
+        raise HTTPException(
+            status_code=400,
+            detail="Question cannot be empty."
+        )
+
+    if request.order_id:
+        task = "tickets_by_order"
+    elif request.include_support_tickets:
+        task = "support_tickets"
+    else:
+        task = None
+
+    result = generate_hybrid_answer(
+        principal=user,
+        question=question,
+        task=task,
+        order_id=request.order_id,
+    )
+
+    response_time = round(
+        time.perf_counter() - start_time, 2
+    )
+
+    return {
+        "question": question,
+        "answer": result["answer"],
+        "role": result["role"],
+        "sources": result["sources"],
+        "found_context": result["found_context"],
+        "retrieval_time": result["retrieval_time"],
+        "generation_time": result["generation_time"],
+        "response_time": response_time,
+    }
+
+
+
+
+# ==========================================
+# AUTHENTICATED OPERATIONS HYBRID CHAT
+# ==========================================
+
+@app.post("/api/v1/operations/hybrid-chat")
+def authenticated_operations_hybrid_chat(
+    request: OperationsHybridChatRequest,
+    user: UserPrincipal = Depends(
+        require_roles(UserRole.OPERATIONS)
+    )
+):
+    start_time = time.perf_counter()
+
+    question = request.question.strip()
+
+    if not question:
+        raise HTTPException(
+            status_code=400,
+            detail="Question cannot be empty."
+        )
+
+    order_id = (
+        request.order_id.strip()
+        if request.order_id and request.order_id.strip()
+        else None
+    )
+
+    if order_id:
+        task = "shipment_summary"
+    elif request.include_inventory_overview:
+        task = "inventory_overview"
+    else:
+        task = None
+
+    try:
+        result = generate_hybrid_answer(
+            principal=user,
+            question=question,
+            task=task,
+            order_id=order_id,
+        )
+
+        response_time = round(
+            time.perf_counter() - start_time, 2
+        )
+
+        return {
+            "question": question,
+            "answer": result["answer"],
+            "role": result["role"],
+            "sources": result["sources"],
+            "found_context": result["found_context"],
+            "retrieval_time": result["retrieval_time"],
+            "generation_time": result["generation_time"],
+            "response_time": response_time,
+        }
+
+    except PermissionError as error:
+        raise HTTPException(
+            status_code=403,
+            detail=str(error)
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+    except Exception as error:
+        print("Operations Hybrid RAG Error:", str(error))
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to generate Operations AI answer."
+        )
+
+
+
+# ==========================================
+# AUTHENTICATED ADMIN HYBRID CHAT
+# ==========================================
+
+@app.post("/api/v1/admin/hybrid-chat")
+def authenticated_admin_hybrid_chat(
+    request: AdminHybridChatRequest,
+    user: UserPrincipal = Depends(
+        require_roles(UserRole.ADMIN)
+    )
+):
+    start_time = time.perf_counter()
+
+    question = request.question.strip()
+
+    if not question:
+        raise HTTPException(
+            status_code=400,
+            detail="Question cannot be empty."
+        )
+
+    task = (
+        "system_analytics"
+        if request.include_system_analytics
+        else None
+    )
+
+    try:
+        result = generate_hybrid_answer(
+            principal=user,
+            question=question,
+            task=task,
+        )
+
+        response_time = round(
+            time.perf_counter() - start_time, 2
+        )
+
+        return {
+            "question": question,
+            "answer": result["answer"],
+            "role": result["role"],
+            "sources": result["sources"],
+            "found_context": result["found_context"],
+            "retrieval_time": result["retrieval_time"],
+            "generation_time": result["generation_time"],
+            "response_time": response_time,
+        }
+
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error))
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+    except Exception as error:
+        print("Admin Hybrid RAG Error:", str(error))
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to generate Admin AI answer."
+        )
+
+
+
+@app.get("/auth/test")
+def test_authentication(
+    user: UserPrincipal = Depends(get_current_principal)
+):
+    return {
+        "message": "Authentication successful",
+        "user_id": user.user_id,
+        "role": user.role.value
+    }
+
+
+@app.get("/auth/customer-test")
+def customer_test(
+    user: UserPrincipal = Depends(
+        require_roles(UserRole.CUSTOMER)
+    )
+):
+    return {
+        "message": "Customer access granted",
+        "user_id": user.user_id
+    }
+
+
+@app.get("/auth/admin-test")
+def admin_test(
+    user: UserPrincipal = Depends(
+        require_roles(UserRole.ADMIN)
+    )
+):
+    return {
+        "message": "Admin access granted",
+        "user_id": user.user_id
+    }
+
+
+
 
 
 # ==========================================

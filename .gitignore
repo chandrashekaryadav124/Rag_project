@@ -1,10 +1,15 @@
-venv/
-.env
-__pycache__/
-*.pyc
-vectorstore/
-my_rag_env/
 
+venv/
+my_rag_env/
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+vectorstore/
 
 certificate/
 certificate/*
