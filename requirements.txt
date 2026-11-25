@@ -9,19 +9,16 @@ httpx
 mysql-connector-python
 supabase
 
-# LLM & Embeddings
+# LLM
 langchain-core
 langchain-groq
 groq
-langchain-huggingface
-sentence-transformers
 
-# Legacy ChromaDB & PDF Ingestion (used by /chat, /health, and app/ingestion.py)
-langchain-chroma
-chromadb
-langchain-community
-langchain-text-splitters
-pypdf
+# Lightweight Embeddings (ONNX Runtime without PyTorch)
+onnxruntime
+tokenizers
+huggingface-hub
+numpy
 
 # Testing
 pytest

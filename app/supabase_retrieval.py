@@ -1,6 +1,6 @@
 
+from app.core.embeddings import embed_query
 from app.core.supabase_client import get_supabase_client
-from app.retrieval import create_embeddings
 
 
 DEFAULT_TOP_K = 4
@@ -30,8 +30,7 @@ def retrieve_supabase_documents(
     if role not in allowed_roles:
         raise ValueError("Invalid RAG role")
 
-    embeddings = create_embeddings()
-    query_embedding = embeddings.embed_query(question)
+    query_embedding = embed_query(question)
 
     supabase = get_supabase_client()
 
