@@ -19,14 +19,36 @@ class RenameSessionRequest(BaseModel):
     title: str
 
 
+def _run_session_action(action_fn, *args, not_found_on_permission_error: bool = True, **kwargs):
+    """Execute a session management operation with consistent HTTP error mapping."""
+    try:
+        return action_fn(*args, **kwargs)
+    except PermissionError as e:
+        status_code = 404 if not_found_on_permission_error else 403
+        raise HTTPException(status_code=status_code, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except Exception as e:
+        print("Conversation session error:", str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Conversation service is temporarily unavailable.",
+        ) from e
+
+
 @router.get("")
 def get_conversations(
     principal: UserPrincipal = Depends(get_current_principal),
 ):
-    try:
-        return {"sessions": list_sessions(principal)}
-    except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+    return {
+        "sessions": _run_session_action(
+            list_sessions,
+            principal,
+            not_found_on_permission_error=False,
+        )
+    }
 
 
 @router.get("/{session_id}/messages")
@@ -34,10 +56,7 @@ def get_conversation_messages(
     session_id: str,
     principal: UserPrincipal = Depends(get_current_principal),
 ):
-    try:
-        return get_session_history(principal, session_id)
-    except PermissionError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    return _run_session_action(get_session_history, principal, session_id)
 
 
 @router.patch("/{session_id}")
@@ -46,12 +65,7 @@ def update_conversation_title(
     request: RenameSessionRequest,
     principal: UserPrincipal = Depends(get_current_principal),
 ):
-    try:
-        return rename_session(principal, session_id, request.title)
-    except PermissionError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return _run_session_action(rename_session, principal, session_id, request.title)
 
 
 @router.post("/{session_id}/archive")
@@ -59,7 +73,4 @@ def archive_conversation(
     session_id: str,
     principal: UserPrincipal = Depends(get_current_principal),
 ):
-    try:
-        return archive_session(principal, session_id)
-    except PermissionError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    return _run_session_action(archive_session, principal, session_id)

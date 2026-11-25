@@ -17,6 +17,26 @@ def make_customer():
     )
 
 
+@pytest.fixture(autouse=True)
+def mock_conversation_memory(monkeypatch):
+    monkeypatch.setattr(
+        "app.orchestration.hybrid_generation.get_or_create_session",
+        lambda principal, session_id=None: {"id": session_id or "test-session-1"},
+    )
+    monkeypatch.setattr(
+        "app.orchestration.hybrid_generation.get_recent_messages",
+        lambda principal, session_id, limit=10: [],
+    )
+    monkeypatch.setattr(
+        "app.orchestration.hybrid_generation.save_message",
+        lambda principal, session_id, message_type, content: {
+            "session_id": session_id,
+            "message_type": message_type,
+            "content": content,
+        },
+    )
+
+
 @patch("app.orchestration.hybrid_generation.create_llm")
 @patch("app.orchestration.hybrid_generation.retrieve_hybrid_context")
 def test_hybrid_generation_with_documents(
@@ -46,6 +66,7 @@ def test_hybrid_generation_with_documents(
     )
 
     assert result["found_context"] is True
+    assert result["session_id"] == "test-session-1"
     assert "10 days" in result["answer"]
     assert len(result["sources"]) == 1
     mock_model.invoke.assert_called_once()

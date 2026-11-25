@@ -13,3 +13,5 @@ vectorstore/
 
 certificate/
 certificate/*
+.vscode/
+

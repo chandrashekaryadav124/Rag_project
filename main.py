@@ -17,7 +17,8 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from app.generation import generate_answer
-from app.retrieval import get_database_info
+from app.core.supabase_client import check_supabase_health
+from app.database import check_mysql_health
 
 from app.orchestration.hybrid_generation import generate_hybrid_answer
 
@@ -159,14 +160,16 @@ def health():
 
         return {
             "status": "healthy",
-            "database": get_database_info()
+            "vector_store": "supabase",
+            "supabase": check_supabase_health(),
+            "mysql": check_mysql_health(),
         }
 
     except Exception as error:
 
         raise HTTPException(
             status_code=503,
-            detail=str(error)
+            detail=f"Service unhealthy: {error}"
         )
 
 
@@ -238,21 +241,19 @@ def customer_chat(request: ChatRequest):
 
 
 
-# ==========================================
-# AUTHENTICATED CUSTOMER HYBRID CHAT
-# ==========================================
-
-@app.post("/api/v1/hybrid-chat")
-def authenticated_hybrid_chat(
-    request: HybridChatRequest,
-    user: UserPrincipal = Depends(
-        require_roles(UserRole.CUSTOMER)
-    )
-):
-
+def _run_hybrid_chat(
+    principal: UserPrincipal,
+    raw_question: str,
+    task: str | None = None,
+    order_id: str | None = None,
+    session_id: str | None = None,
+    error_label: str = "Hybrid RAG",
+    failure_detail: str = "Unable to generate a hybrid answer. Please try again.",
+) -> dict:
+    """Validate input, run hybrid generation, and map errors consistently."""
     start_time = time.perf_counter()
 
-    question = request.question.strip()
+    question = raw_question.strip()
 
     if not question:
         raise HTTPException(
@@ -261,21 +262,12 @@ def authenticated_hybrid_chat(
         )
 
     try:
-
-        # Only retrieve the customer's own orders
-        # when explicitly requested.
-        task = (
-            "own_orders"
-            if request.include_own_orders
-            else None
-        )
-
         result = generate_hybrid_answer(
-            principal=user,
+            principal=principal,
             question=question,
             task=task,
-            session_id=request.session_id,
-
+            order_id=order_id,
+            session_id=session_id,
         )
 
         response_time = round(
@@ -296,27 +288,50 @@ def authenticated_hybrid_chat(
         }
 
     except PermissionError as error:
-
         raise HTTPException(
             status_code=403,
             detail=str(error)
-        )
+        ) from error
 
     except ValueError as error:
-
         raise HTTPException(
             status_code=400,
             detail=str(error)
-        )
+        ) from error
+
+    except RuntimeError as error:
+        raise HTTPException(
+            status_code=503,
+            detail=str(error)
+        ) from error
 
     except Exception as error:
-
-        print("Hybrid generation error:", str(error))
-
+        print(f"{error_label} Error:", str(error))
         raise HTTPException(
             status_code=500,
-            detail="Unable to generate a hybrid answer. Please try again."
-        )
+            detail=failure_detail
+        ) from error
+
+
+# ==========================================
+# AUTHENTICATED CUSTOMER HYBRID CHAT
+# ==========================================
+
+@app.post("/api/v1/hybrid-chat")
+def authenticated_hybrid_chat(
+    request: HybridChatRequest,
+    user: UserPrincipal = Depends(
+        require_roles(UserRole.CUSTOMER)
+    )
+):
+    task = "own_orders" if request.include_own_orders else None
+    return _run_hybrid_chat(
+        principal=user,
+        raw_question=request.question,
+        task=task,
+        session_id=request.session_id,
+        error_label="Hybrid generation",
+    )
 
 
 @app.post("/api/v1/seller/hybrid-chat")
@@ -326,45 +341,15 @@ def authenticated_seller_hybrid_chat(
         require_roles(UserRole.SELLER)
     )
 ):
-    start_time = time.perf_counter()
-
-    question = request.question.strip()
-
-    if not question:
-        raise HTTPException(
-            status_code=400,
-            detail="Question cannot be empty."
-        )
-
-    task = (
-        "own_products"
-        if request.include_own_products
-        else None
-    )
-
-    result = generate_hybrid_answer(
+    task = "own_products" if request.include_own_products else None
+    return _run_hybrid_chat(
         principal=user,
-        question=question,
+        raw_question=request.question,
         task=task,
         session_id=request.session_id,
+        error_label="Seller Hybrid RAG",
+        failure_detail="Unable to generate Seller AI answer.",
     )
-
-    response_time = round(
-        time.perf_counter() - start_time,
-        2
-    )
-
-    return {
-        "question": question,
-        "answer": result["answer"],
-        "role": result["role"],
-        "session_id": result["session_id"],
-        "sources": result["sources"],
-        "found_context": result["found_context"],
-        "retrieval_time": result["retrieval_time"],
-        "generation_time": result["generation_time"],
-        "response_time": response_time,
-    }
 
 
 # ==========================================
@@ -378,48 +363,28 @@ def authenticated_support_hybrid_chat(
         require_roles(UserRole.SUPPORT)
     )
 ):
-    start_time = time.perf_counter()
+    order_id = (
+        request.order_id.strip()
+        if request.order_id and request.order_id.strip()
+        else None
+    )
 
-    question = request.question.strip()
-
-    if not question:
-        raise HTTPException(
-            status_code=400,
-            detail="Question cannot be empty."
-        )
-
-    if request.order_id:
+    if order_id:
         task = "tickets_by_order"
     elif request.include_support_tickets:
         task = "support_tickets"
     else:
         task = None
 
-    result = generate_hybrid_answer(
+    return _run_hybrid_chat(
         principal=user,
-        question=question,
+        raw_question=request.question,
         task=task,
-        order_id=request.order_id,
+        order_id=order_id,
         session_id=request.session_id,
+        error_label="Support Hybrid RAG",
+        failure_detail="Unable to generate Support AI answer.",
     )
-
-    response_time = round(
-        time.perf_counter() - start_time, 2
-    )
-
-    return {
-        "question": question,
-        "answer": result["answer"],
-        "role": result["role"],
-        "session_id": result["session_id"],
-        "sources": result["sources"],
-        "found_context": result["found_context"],
-        "retrieval_time": result["retrieval_time"],
-        "generation_time": result["generation_time"],
-        "response_time": response_time,
-    }
-
-
 
 
 # ==========================================
@@ -433,16 +398,6 @@ def authenticated_operations_hybrid_chat(
         require_roles(UserRole.OPERATIONS)
     )
 ):
-    start_time = time.perf_counter()
-
-    question = request.question.strip()
-
-    if not question:
-        raise HTTPException(
-            status_code=400,
-            detail="Question cannot be empty."
-        )
-
     order_id = (
         request.order_id.strip()
         if request.order_id and request.order_id.strip()
@@ -456,50 +411,15 @@ def authenticated_operations_hybrid_chat(
     else:
         task = None
 
-    try:
-        result = generate_hybrid_answer(
-            principal=user,
-            question=question,
-            task=task,
-            order_id=order_id,
-            session_id=request.session_id,
-        )
-
-        response_time = round(
-            time.perf_counter() - start_time, 2
-        )
-
-        return {
-            "question": question,
-            "answer": result["answer"],
-            "role": result["role"],
-            "session_id": result["session_id"],
-            "sources": result["sources"],
-            "found_context": result["found_context"],
-            "retrieval_time": result["retrieval_time"],
-            "generation_time": result["generation_time"],
-            "response_time": response_time,
-        }
-
-    except PermissionError as error:
-        raise HTTPException(
-            status_code=403,
-            detail=str(error)
-        )
-
-    except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error)
-        )
-
-    except Exception as error:
-        print("Operations Hybrid RAG Error:", str(error))
-        raise HTTPException(
-            status_code=500,
-            detail="Unable to generate Operations AI answer."
-        )
-
+    return _run_hybrid_chat(
+        principal=user,
+        raw_question=request.question,
+        task=task,
+        order_id=order_id,
+        session_id=request.session_id,
+        error_label="Operations Hybrid RAG",
+        failure_detail="Unable to generate Operations AI answer.",
+    )
 
 
 # ==========================================
@@ -513,58 +433,15 @@ def authenticated_admin_hybrid_chat(
         require_roles(UserRole.ADMIN)
     )
 ):
-    start_time = time.perf_counter()
-
-    question = request.question.strip()
-
-    if not question:
-        raise HTTPException(
-            status_code=400,
-            detail="Question cannot be empty."
-        )
-
-    task = (
-        "system_analytics"
-        if request.include_system_analytics
-        else None
+    task = "system_analytics" if request.include_system_analytics else None
+    return _run_hybrid_chat(
+        principal=user,
+        raw_question=request.question,
+        task=task,
+        session_id=request.session_id,
+        error_label="Admin Hybrid RAG",
+        failure_detail="Unable to generate Admin AI answer.",
     )
-
-    try:
-        result = generate_hybrid_answer(
-            principal=user,
-            question=question,
-            task=task,
-            session_id=request.session_id,
-        )
-
-        response_time = round(
-            time.perf_counter() - start_time, 2
-        )
-
-        return {
-            "question": question,
-            "answer": result["answer"],
-            "role": result["role"],
-            "session_id": result["session_id"],
-            "sources": result["sources"],
-            "found_context": result["found_context"],
-            "retrieval_time": result["retrieval_time"],
-            "generation_time": result["generation_time"],
-            "response_time": response_time,
-        }
-
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error))
-
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error))
-
-    except Exception as error:
-        print("Admin Hybrid RAG Error:", str(error))
-        raise HTTPException(
-            status_code=500,
-            detail="Unable to generate Admin AI answer."
-        )
 
 
 
