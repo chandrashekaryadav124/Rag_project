@@ -118,6 +118,26 @@ def test_db_connection():
             connection.close()
 
 
+def check_mysql_health() -> dict:
+    """Run a lightweight MySQL connectivity check for /health."""
+
+    connection = None
+    cursor = None
+
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute("SELECT 1")
+        cursor.fetchone()
+        return {"status": "connected"}
+    finally:
+        if cursor:
+            cursor.close()
+
+        if connection and connection.is_connected():
+            connection.close()
+
+
 # ==========================================
 # EXECUTION
 # ==========================================

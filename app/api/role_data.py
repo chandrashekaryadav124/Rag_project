@@ -1,7 +1,6 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.core.auth import get_current_principal
 from app.core.permissions import require_roles
 from app.core.security import UserPrincipal, UserRole
 
@@ -27,13 +26,31 @@ router = APIRouter(
 )
 
 
+def _execute_role_query(query_fn, *args, **kwargs):
+    """Execute a role-authorized SQL query with consistent HTTP error mapping."""
+    try:
+        return query_fn(*args, **kwargs)
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except Exception as error:
+        print("Role data access error:", str(error))
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to retrieve authorized role data.",
+        ) from error
+
+
 @router.get("/customer/orders")
 def customer_orders(
     user: UserPrincipal = Depends(
         require_roles(UserRole.CUSTOMER)
     ),
 ):
-    return get_own_customer_orders(user)
+    return _execute_role_query(get_own_customer_orders, user)
 
 
 @router.get("/seller/products")
@@ -42,7 +59,7 @@ def seller_products(
         require_roles(UserRole.SELLER)
     ),
 ):
-    return get_own_seller_products(user)
+    return _execute_role_query(get_own_seller_products, user)
 
 
 @router.get("/support/orders/{order_id}")
@@ -52,7 +69,7 @@ def support_order(
         require_roles(UserRole.SUPPORT, UserRole.ADMIN)
     ),
 ):
-    return get_support_order_summary(user, order_id)
+    return _execute_role_query(get_support_order_summary, user, order_id)
 
 
 @router.get("/support/tickets")
@@ -62,7 +79,7 @@ def support_tickets(
         require_roles(UserRole.SUPPORT, UserRole.ADMIN)
     ),
 ):
-    return get_support_tickets(user, limit)
+    return _execute_role_query(get_support_tickets, user, limit)
 
 
 @router.get("/operations/shipments/{order_id}")
@@ -72,7 +89,7 @@ def operations_shipments(
         require_roles(UserRole.OPERATIONS, UserRole.ADMIN)
     ),
 ):
-    return get_shipment_summary(user, order_id)
+    return _execute_role_query(get_shipment_summary, user, order_id)
 
 
 @router.get("/operations/inventory")
@@ -81,7 +98,7 @@ def operations_inventory(
         require_roles(UserRole.OPERATIONS, UserRole.ADMIN)
     ),
 ):
-    return get_inventory_snapshot_summary(user)
+    return _execute_role_query(get_inventory_snapshot_summary, user)
 
 
 @router.get("/admin/analytics")
@@ -90,4 +107,4 @@ def admin_analytics(
         require_roles(UserRole.ADMIN)
     ),
 ):
-    return get_system_analytics(user)
+    return _execute_role_query(get_system_analytics, user)

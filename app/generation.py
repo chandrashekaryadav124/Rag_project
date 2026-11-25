@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 from langchain_groq import ChatGroq
 
-from app.retrieval import retrieve_documents
+from app.supabase_retrieval import retrieve_supabase_documents
 
 
 # ==========================================
@@ -69,12 +69,23 @@ def prepare_context(documents):
         start=1
     ):
 
-        source_name = document.metadata.get(
-            "source_file",
-            "Customer Knowledge Base"
-        )
-
-        page_number = document.metadata.get("page")
+        if isinstance(document, dict):
+            metadata = document.get("metadata") or {}
+            source_name = (
+                document.get("source")
+                or metadata.get("source_file")
+                or "Customer Knowledge Base"
+            )
+            page_number = document.get("page", metadata.get("page"))
+            content = document.get("content", "")
+        else:
+            metadata = getattr(document, "metadata", {}) or {}
+            source_name = metadata.get(
+                "source_file",
+                metadata.get("source", "Customer Knowledge Base")
+            )
+            page_number = metadata.get("page")
+            content = getattr(document, "page_content", "")
 
         context_parts.append(
             f"""
@@ -85,7 +96,7 @@ File: {source_name}
 Page: {page_number}
 
 Content:
-{document.page_content}
+{content}
 """
         )
 
@@ -200,8 +211,9 @@ def generate_answer(question: str):
 
     retrieval_start = time.perf_counter()
 
-    documents = retrieve_documents(
+    documents = retrieve_supabase_documents(
         question=question,
+        role="CUSTOMER",
         top_k=3
     )
 

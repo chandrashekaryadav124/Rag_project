@@ -23,3 +23,11 @@ def get_supabase_client() -> Client:
         )
 
     return create_client(url, key)
+
+
+def check_supabase_health() -> dict:
+    """Run a lightweight Supabase connectivity check for /health."""
+
+    client = get_supabase_client()
+    client.table("knowledge_documents").select("id").limit(1).execute()
+    return {"status": "connected", "vector_store": "supabase"}
