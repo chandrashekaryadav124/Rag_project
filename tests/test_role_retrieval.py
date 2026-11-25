@@ -67,3 +67,23 @@ def test_task_must_be_string():
             make_user(UserRole.ADMIN),
             None,
         )
+
+
+def test_support_order_and_tickets_returns_combined_data(monkeypatch):
+    monkeypatch.setattr(
+        "app.orchestration.role_retrieval.get_support_order_summary",
+        lambda principal, order_id: {"order_id": order_id, "order_status": "Processing"},
+    )
+    monkeypatch.setattr(
+        "app.orchestration.role_retrieval.get_support_tickets_by_order",
+        lambda principal, order_id: [{"ticket_id": "TCK-1", "order_id": order_id}],
+    )
+
+    result = retrieve_role_data(
+        make_user(UserRole.SUPPORT),
+        "order_and_tickets",
+        order_id="ORD-123",
+    )
+
+    assert result["order"]["order_id"] == "ORD-123"
+    assert len(result["tickets"]) == 1

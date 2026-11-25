@@ -70,6 +70,12 @@ def test_hybrid_generation_with_documents(
     assert "10 days" in result["answer"]
     assert len(result["sources"]) == 1
     mock_model.invoke.assert_called_once()
+    sent_prompt = mock_model.invoke.call_args[0][0]
+    messages = sent_prompt.to_messages()
+    assert len(messages) == 2
+    assert messages[0].type == "system"
+    assert messages[1].type == "human"
+    assert "Indian Rupees (INR" in messages[0].content
 
 
 @patch("app.orchestration.hybrid_generation.create_llm")
@@ -110,3 +116,28 @@ def test_hybrid_generation_rejects_inactive_user():
             role=UserRole.CUSTOMER,
             is_active=False,
         )
+
+
+@patch("app.orchestration.hybrid_generation.save_message")
+@patch("app.orchestration.hybrid_generation.create_llm")
+@patch("app.orchestration.hybrid_generation.retrieve_hybrid_context")
+def test_hybrid_generation_does_not_persist_orphaned_message_on_llm_error(
+    mock_retrieval,
+    mock_create_llm,
+    mock_save_message,
+):
+    mock_retrieval.return_value = {
+        "structured_data": None,
+        "knowledge_documents": [{"content": "Policy doc", "source": "policy.pdf"}],
+    }
+    mock_model = MagicMock()
+    mock_model.invoke.side_effect = RuntimeError("Groq failure")
+    mock_create_llm.return_value = mock_model
+
+    with pytest.raises(RuntimeError, match="Groq failure"):
+        generate_hybrid_answer(
+            principal=make_customer(),
+            question="What is the return policy?",
+        )
+
+    mock_save_message.assert_not_called()
