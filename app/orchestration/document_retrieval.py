@@ -1,6 +1,6 @@
 
 from app.core.security import UserPrincipal
-from app.retrieval import retrieve_documents
+from app.supabase_retrieval import retrieve_supabase_documents
 
 
 def retrieve_authorized_documents(
@@ -9,11 +9,8 @@ def retrieve_authorized_documents(
     top_k: int = 4
 ):
     """
-    Retrieve documents only from a knowledge base
-    authorized for the authenticated user's role.
-
-    Currently, only the Customer knowledge base exists.
-    Other roles can still use authorized SQL retrieval.
+    Retrieve approved documents from Supabase
+    for the authenticated user's role.
     """
 
     if not principal.is_active:
@@ -25,14 +22,15 @@ def retrieve_authorized_documents(
     if top_k < 1 or top_k > 20:
         raise ValueError("top_k must be between 1 and 20.")
 
-    role = principal.role.value
+    role = principal.role.value.upper()
 
-    if role == "customer":
-        return retrieve_documents(
+    if role == "CUSTOMER":
+        return retrieve_supabase_documents(
             question=question,
+            role=role,
             top_k=top_k
         )
 
-    # Other role-specific document collections
-    # will be connected after their knowledge bases are created.
+    # Other role-specific knowledge bases
+    # will be connected when their approved documents are available.
     return []

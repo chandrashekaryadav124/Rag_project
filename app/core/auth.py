@@ -1,14 +1,21 @@
 
 import os
 
-from fastapi import Request, HTTPException, status
+from fastapi import Request, HTTPException, status, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.core.security import UserPrincipal
 from app.core.dev_auth import get_dev_current_user
 from app.core.auth_provider import PhaseOneAuthenticationProvider
 
 
-def get_current_principal(request: Request) -> UserPrincipal:
+bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def get_current_principal(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> UserPrincipal:
 
     environment = os.getenv("APP_ENV", "development").lower()
     provider_name = os.getenv("AUTH_PROVIDER", "development").lower()
@@ -24,7 +31,6 @@ def get_current_principal(request: Request) -> UserPrincipal:
 
     # Local development authentication.
     if provider_name == "development":
-
         try:
             return get_dev_current_user(
                 x_dev_user_id=request.headers.get("X-Dev-User-Id"),
@@ -44,10 +50,7 @@ def get_current_principal(request: Request) -> UserPrincipal:
     # Real Phase I authentication.
     if provider_name == "phase1":
 
-        authorization = request.headers.get("Authorization", "")
-        scheme, separator, token = authorization.partition(" ")
-
-        if not separator or scheme.lower() != "bearer" or not token.strip():
+        if credentials is None or credentials.scheme.lower() != "bearer":
             raise HTTPException(
                 status_code=401,
                 detail="A valid Bearer token is required.",
@@ -56,7 +59,7 @@ def get_current_principal(request: Request) -> UserPrincipal:
 
         try:
             provider = PhaseOneAuthenticationProvider()
-            return provider.authenticate(token.strip())
+            return provider.authenticate(credentials.credentials.strip())
 
         except PermissionError:
             raise HTTPException(
