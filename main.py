@@ -28,6 +28,7 @@ from app.core.permissions import require_roles
 from app.core.security import UserPrincipal, UserRole
 
 from app.api.role_data import router as role_data_router
+from app.api.session_routes import router as session_router
 
 
 # ==========================================
@@ -66,6 +67,7 @@ app = FastAPI(
 # CORS
 # ==========================================
 app.include_router(role_data_router)
+app.include_router(session_router)
 
 allowed_origins = os.getenv(
     "ALLOWED_ORIGINS",
@@ -106,26 +108,30 @@ class HybridChatRequest(BaseModel):
         min_length=1,
         max_length=2000
     )
-
+    session_id: str | None = None
     include_own_orders: bool = False
 
 class SellerHybridChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     include_own_products: bool = True
+    session_id: str | None = None
 
 class SupportHybridChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     order_id: str | None = None
     include_support_tickets: bool = True
+    session_id: str | None = None
 
 class OperationsHybridChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     order_id: str | None = None
     include_inventory_overview: bool = True
+    session_id: str | None = None
 
 class AdminHybridChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     include_system_analytics: bool = True
+    session_id: str | None = None
 # ==========================================
 # HOME ENDPOINT
 # ==========================================
@@ -202,6 +208,7 @@ def customer_chat(request: ChatRequest):
             "found_context": result["found_context"],
             "response_time": response_time,
             "role": "customer"
+            
         }
 
     except ValueError as error:
@@ -267,6 +274,8 @@ def authenticated_hybrid_chat(
             principal=user,
             question=question,
             task=task,
+            session_id=request.session_id,
+
         )
 
         response_time = round(
@@ -278,6 +287,7 @@ def authenticated_hybrid_chat(
             "question": question,
             "answer": result["answer"],
             "role": result["role"],
+            "session_id": result["session_id"],
             "sources": result["sources"],
             "found_context": result["found_context"],
             "retrieval_time": result["retrieval_time"],
@@ -336,6 +346,7 @@ def authenticated_seller_hybrid_chat(
         principal=user,
         question=question,
         task=task,
+        session_id=request.session_id,
     )
 
     response_time = round(
@@ -347,6 +358,7 @@ def authenticated_seller_hybrid_chat(
         "question": question,
         "answer": result["answer"],
         "role": result["role"],
+        "session_id": result["session_id"],
         "sources": result["sources"],
         "found_context": result["found_context"],
         "retrieval_time": result["retrieval_time"],
@@ -388,6 +400,7 @@ def authenticated_support_hybrid_chat(
         question=question,
         task=task,
         order_id=request.order_id,
+        session_id=request.session_id,
     )
 
     response_time = round(
@@ -398,6 +411,7 @@ def authenticated_support_hybrid_chat(
         "question": question,
         "answer": result["answer"],
         "role": result["role"],
+        "session_id": result["session_id"],
         "sources": result["sources"],
         "found_context": result["found_context"],
         "retrieval_time": result["retrieval_time"],
@@ -448,6 +462,7 @@ def authenticated_operations_hybrid_chat(
             question=question,
             task=task,
             order_id=order_id,
+            session_id=request.session_id,
         )
 
         response_time = round(
@@ -458,6 +473,7 @@ def authenticated_operations_hybrid_chat(
             "question": question,
             "answer": result["answer"],
             "role": result["role"],
+            "session_id": result["session_id"],
             "sources": result["sources"],
             "found_context": result["found_context"],
             "retrieval_time": result["retrieval_time"],
@@ -518,6 +534,7 @@ def authenticated_admin_hybrid_chat(
             principal=user,
             question=question,
             task=task,
+            session_id=request.session_id,
         )
 
         response_time = round(
@@ -528,6 +545,7 @@ def authenticated_admin_hybrid_chat(
             "question": question,
             "answer": result["answer"],
             "role": result["role"],
+            "session_id": result["session_id"],
             "sources": result["sources"],
             "found_context": result["found_context"],
             "retrieval_time": result["retrieval_time"],
