@@ -1,9 +1,38 @@
 
+import hashlib
 import os
-import httpx
+import threading
+import time
 from abc import ABC, abstractmethod
+from typing import Optional
+
+import httpx
 
 from app.core.security import UserPrincipal, UserRole
+
+
+_AUTH_CLIENT: Optional[httpx.Client] = None
+_AUTH_CACHE_LOCK = threading.Lock()
+_AUTH_CACHE: dict[str, tuple[float, UserPrincipal]] = {}
+_MAX_CACHE_ENTRIES = 512
+
+
+def _get_auth_client() -> httpx.Client:
+    global _AUTH_CLIENT
+    if _AUTH_CLIENT is None:
+        _AUTH_CLIENT = httpx.Client(timeout=15.0)
+    return _AUTH_CLIENT
+
+
+def _cache_ttl_seconds() -> float:
+    try:
+        return max(0.0, float(os.getenv("AUTH_CACHE_TTL_SECONDS", "60")))
+    except ValueError:
+        return 60.0
+
+
+def _token_cache_key(base_url: str, token: str) -> str:
+    return hashlib.sha256(f"{base_url}|{token}".encode("utf-8")).hexdigest()
 
 
 class AuthenticationProvider(ABC):
@@ -42,14 +71,24 @@ class PhaseOneAuthenticationProvider(AuthenticationProvider):
             )
 
         url = f"{base_url}/api/v1/auth/me"
+        ttl = _cache_ttl_seconds()
+        cache_key = _token_cache_key(base_url, token)
+
+        if ttl > 0:
+            now = time.monotonic()
+            with _AUTH_CACHE_LOCK:
+                cached = _AUTH_CACHE.get(cache_key)
+                if cached and cached[0] > now:
+                    return cached[1]
+                if cached:
+                    _AUTH_CACHE.pop(cache_key, None)
 
         try:
-            response = httpx.get(
+            response = _get_auth_client().get(
                 url,
                 headers={
                     "Authorization": f"Bearer {token}"
                 },
-                timeout=15.0
             )
 
             if response.status_code == 401:
@@ -94,8 +133,16 @@ class PhaseOneAuthenticationProvider(AuthenticationProvider):
         if is_active is not True:
             raise PermissionError("User account is inactive.")
 
-        return UserPrincipal(
+        principal = UserPrincipal(
             user_id=str(user_id),
             role=role,
             is_active=True
         )
+
+        if ttl > 0:
+            with _AUTH_CACHE_LOCK:
+                if len(_AUTH_CACHE) >= _MAX_CACHE_ENTRIES:
+                    _AUTH_CACHE.clear()
+                _AUTH_CACHE[cache_key] = (time.monotonic() + ttl, principal)
+
+        return principal

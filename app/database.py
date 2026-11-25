@@ -4,7 +4,10 @@
 # ==========================================
 
 import os
+from functools import lru_cache
+
 import mysql.connector
+from mysql.connector import pooling
 
 from dotenv import load_dotenv
 
@@ -24,7 +27,7 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 # DATABASE CONNECTION
 # ==========================================
 
-def get_db_connection():
+def _build_mysql_config() -> dict:
 
     config = {
         "host": os.getenv("MYSQL_HOST"),
@@ -69,7 +72,23 @@ def get_db_connection():
             + ", ".join(missing)
         )
 
-    return mysql.connector.connect(**config)
+    return config
+
+
+@lru_cache(maxsize=1)
+def _get_mysql_pool() -> pooling.MySQLConnectionPool:
+    config = _build_mysql_config()
+    pool_size = max(1, int(os.getenv("MYSQL_POOL_SIZE", "5")))
+    return pooling.MySQLConnectionPool(
+        pool_name="rag_mysql_pool",
+        pool_size=pool_size,
+        pool_reset_session=True,
+        **config,
+    )
+
+
+def get_db_connection():
+    return _get_mysql_pool().get_connection()
 
 
 # ==========================================

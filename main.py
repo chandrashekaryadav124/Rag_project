@@ -17,6 +17,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from app.generation import generate_answer
+from app.core.embeddings import preload_embeddings
 from app.core.supabase_client import check_supabase_health
 from app.database import check_mysql_health
 
@@ -46,6 +47,13 @@ async def lifespan(app: FastAPI):
     print("Chat UI: /ui")
     print("API Docs: /docs")
     print("Health: /health")
+
+    if os.getenv("PRELOAD_EMBEDDINGS", "true").lower() in ("true", "1"):
+        try:
+            preload_embeddings()
+            print("Embedding model preloaded.")
+        except Exception as error:
+            print("Embedding preload skipped:", str(error))
 
     yield
 
@@ -83,7 +91,7 @@ app.add_middleware(
         if origin.strip()
     ],
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"]
 )
 
@@ -137,7 +145,7 @@ class AdminHybridChatRequest(BaseModel):
 # HOME ENDPOINT
 # ==========================================
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def home():
 
     return {
