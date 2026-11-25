@@ -175,10 +175,16 @@ def health():
         }
 
     except Exception as error:
+        print("Health check error:", str(error))
+        is_prod = (
+            os.getenv("APP_ENV", "development").lower() == "production"
+            or os.getenv("RENDER", "").lower() in ("true", "1")
+        )
+        detail = "Service unhealthy." if is_prod else f"Service unhealthy: {error}"
 
         raise HTTPException(
             status_code=503,
-            detail=f"Service unhealthy: {error}"
+            detail=detail
         )
 
 
@@ -378,8 +384,10 @@ def authenticated_support_hybrid_chat(
         else None
     )
 
-    if order_id:
-        task = "tickets_by_order"
+    if order_id and request.include_support_tickets:
+        task = "order_and_tickets"
+    elif order_id:
+        task = "order_summary"
     elif request.include_support_tickets:
         task = "support_tickets"
     else:
@@ -690,6 +698,116 @@ button { -webkit-tap-highlight-color: transparent; }
     line-height: 1.65;
 }
 
+.auth-card {
+    padding: 13px;
+    margin-bottom: 18px;
+    border: 1px solid #e3e8f6;
+    border-radius: 13px;
+    background: #f8faff;
+}
+
+.auth-card-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    color: #34425c;
+    font-size: 11px;
+    font-weight: 720;
+}
+
+.auth-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #dce3f2;
+    border-radius: 8px;
+    color: var(--ink);
+    background: #fff;
+    font-family: inherit;
+    font-size: 11px;
+    outline: none;
+}
+
+.auth-input:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px rgba(82, 110, 229, .12);
+}
+
+.auth-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.auth-btn {
+    flex: 1;
+    padding: 7px 10px;
+    border: 0;
+    border-radius: 8px;
+    color: #fff;
+    background: var(--blue);
+    font-size: 11px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.auth-btn:hover { background: var(--blue-dark); }
+.auth-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+.auth-clear {
+    padding: 7px 10px;
+    border: 1px solid #dce3f2;
+    border-radius: 8px;
+    color: #596780;
+    background: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.auth-status {
+    margin-top: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    font-size: 10px;
+    line-height: 1.45;
+    color: #596780;
+    background: #eef2fb;
+    overflow-wrap: anywhere;
+}
+
+.auth-status.verified {
+    color: #156d49;
+    background: #eaf8f1;
+    border: 1px solid #cdecd9;
+}
+
+.auth-status.error {
+    color: #9e2a2b;
+    background: #fdeeee;
+    border: 1px solid #f6d0d0;
+}
+
+.order-filter-wrap {
+    margin-top: 9px;
+    padding-top: 9px;
+    border-top: 1px solid #e4e9f5;
+}
+
+.order-filter-label {
+    display: block;
+    margin-bottom: 4px;
+    color: #65728a;
+    font-size: 10px;
+    font-weight: 650;
+}
+
+.meta-timing {
+    margin-top: 6px;
+    color: #8894ab;
+    font-size: 10px;
+}
+
 .chat-panel {
     min-width: 0;
     min-height: 650px;
@@ -886,6 +1004,52 @@ button { -webkit-tap-highlight-color: transparent; }
     overflow-wrap: anywhere;
 }
 
+.message-row.assistant .bubble {
+    white-space: normal;
+}
+
+.bubble h3, .bubble h4 {
+    margin: 12px 0 6px;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.bubble h3:first-child, .bubble h4:first-child { margin-top: 0; }
+.bubble p { margin: 0 0 8px; }
+.bubble p:last-child { margin-bottom: 0; }
+.bubble ul, .bubble ol { margin: 6px 0 8px; padding-left: 18px; }
+.bubble li { margin: 3px 0; }
+.bubble hr { border: 0; border-top: 1px solid #edf0f6; margin: 10px 0; }
+.bubble code {
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: #f1f4fb;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+}
+
+.bubble table {
+    width: 100%;
+    margin: 8px 0;
+    border-collapse: collapse;
+    font-size: 11px;
+    display: block;
+    overflow-x: auto;
+}
+
+.bubble th, .bubble td {
+    padding: 6px 9px;
+    border: 1px solid #e6ebf5;
+    text-align: left;
+}
+
+.bubble th {
+    background: #f6f8fd;
+    color: #34425c;
+    font-weight: 680;
+}
+
 .message-row.user .bubble {
     border: 0;
     border-radius: 14px 4px 14px 14px;
@@ -1005,8 +1169,7 @@ button { -webkit-tap-highlight-color: transparent; }
 
 @media (max-width: 800px) {
     .workspace { width: min(100% - 28px, 760px); grid-template-columns: 1fr; }
-    .sidebar { display: none; }
-    .chat-panel { min-height: calc(100vh - 110px); }
+    .chat-panel { min-height: 520px; }
     .topbar { padding: 0 20px; }
     .conversation { padding: 22px 24px 17px; }
 }
@@ -1059,31 +1222,34 @@ button { -webkit-tap-highlight-color: transparent; }
 </header>
 
 <main class="workspace">
-    <aside class="sidebar" aria-label="Support topics">
-        <p class="sidebar-kicker">Support center</p>
+    <aside class="sidebar" aria-label="Support topics and authentication">
+        <div class="auth-card">
+            <div class="auth-card-title">
+                <span>Phase I Token Tester</span>
+                <span id="roleBadge">Guest</span>
+            </div>
+            <input class="auth-input" id="authTokenInput" type="password" placeholder="Paste Bearer JWT from Phase I..." aria-label="Phase I JWT Token" autocomplete="off" />
+            <div class="auth-actions">
+                <button class="auth-btn" id="verifyTokenBtn" type="button">Verify Token</button>
+                <button class="auth-clear" id="clearTokenBtn" type="button" hidden>Clear</button>
+            </div>
+            <div class="auth-status" id="authStatus">Guest mode · Public Customer KB (/chat)</div>
+            <div class="order-filter-wrap" id="orderFilterWrap" hidden>
+                <label class="order-filter-label" for="orderIdInput">Optional Order ID (Support / Ops)</label>
+                <input class="auth-input" id="orderIdInput" type="text" placeholder="e.g. ORD25B99B4" autocomplete="off" />
+            </div>
+        </div>
+        <p class="sidebar-kicker">Quick prompts</p>
         <h2 class="sidebar-title">What can we help with?</h2>
-        <nav class="topic-list">
-            <button class="topic-button" type="button" data-question="What is the return policy?">
-                <span class="topic-icon" aria-hidden="true">↩</span><span class="topic-label">Returns &amp; exchanges</span>
-            </button>
-            <button class="topic-button" type="button" data-question="How long do refunds take?">
-                <span class="topic-icon" aria-hidden="true">₹</span><span class="topic-label">Payments &amp; refunds</span>
-            </button>
-            <button class="topic-button" type="button" data-question="Who delivers customer orders?">
-                <span class="topic-icon" aria-hidden="true">⌁</span><span class="topic-label">Shipping &amp; delivery</span>
-            </button>
-            <button class="topic-button" type="button" data-question="What products are available?">
-                <span class="topic-icon" aria-hidden="true">◇</span><span class="topic-label">Products &amp; availability</span>
-            </button>
-        </nav>
+        <nav class="topic-list" id="topicList"></nav>
         <div class="sidebar-divider"></div>
         <div class="knowledge-card">
             <div class="knowledge-card-title">
                 <span aria-hidden="true">✦</span> Answers you can trust
             </div>
-            <p>Responses are grounded in the approved customer knowledge base, with source references when available.</p>
+            <p id="knowledgeCopy">Responses are grounded in the approved customer knowledge base, with source references when available.</p>
         </div>
-        <p class="sidebar-note">For live order status or account changes, please use the customer application.</p>
+        <p class="sidebar-note" id="sidebarNote">Paste a Phase I JWT above to test role-based MySQL + RAG + memory.</p>
     </aside>
 
     <section class="chat-panel" aria-label="Customer support chat">
@@ -1095,8 +1261,8 @@ button { -webkit-tap-highlight-color: transparent; }
                     </svg>
                 </span>
                 <span>
-                    <span class="panel-heading">Customer support assistant</span>
-                    <span class="panel-subheading">Here to help with products, policies, and more</span>
+                    <span class="panel-heading" id="panelHeading">Customer support assistant</span>
+                    <span class="panel-subheading" id="panelSubheading">Public Knowledge Base mode · Paste a Phase I token to unlock role data</span>
                 </span>
             </div>
             <button class="new-chat" id="newChatButton" type="button" aria-label="Start a new chat" title="Start a new chat">
@@ -1120,20 +1286,7 @@ button { -webkit-tap-highlight-color: transparent; }
                     <h1>How can we help today?</h1>
                     <p class="welcome-copy">Ask a question about our products, delivery, returns, or policies. We’ll find the most helpful answer for you.</p>
                     <p class="suggestion-heading">POPULAR QUESTIONS</p>
-                    <div class="suggestions">
-                        <button class="suggestion" type="button" data-question="What is the return policy?">
-                            <strong>What is your return policy?</strong><span>Learn about returns and exchanges</span>
-                        </button>
-                        <button class="suggestion" type="button" data-question="How long do refunds take?">
-                            <strong>When will my refund arrive?</strong><span>Get details on refund timelines</span>
-                        </button>
-                        <button class="suggestion" type="button" data-question="Who delivers customer orders?">
-                            <strong>How are orders delivered?</strong><span>Find out about shipping and delivery</span>
-                        </button>
-                        <button class="suggestion" type="button" data-question="What products are available?">
-                            <strong>What products do you offer?</strong><span>Explore products and availability</span>
-                        </button>
-                    </div>
+                    <div class="suggestions" id="suggestionsGrid"></div>
                 </section>
             </div>
 
@@ -1157,9 +1310,277 @@ button { -webkit-tap-highlight-color: transparent; }
 
 <script>
 let isLoading = false;
+let activeSessionId = null;
+const authState = { token: "", userId: null, role: null };
 const welcomePanel = document.getElementById("welcome");
 
-function addMessage(text, type, sources = []) {
+const ROLE_CONFIG = {
+    guest: {
+        heading: "Customer support assistant",
+        subheading: "Public Knowledge Base mode · Paste a Phase I token to unlock role data",
+        topics: [
+            { icon: "↩", label: "Returns & exchanges", question: "What is the return policy?" },
+            { icon: "₹", label: "Payments & refunds", question: "How long do refunds take?" },
+            { icon: "⌁", label: "Shipping & delivery", question: "Who delivers customer orders?" },
+            { icon: "◇", label: "Products & availability", question: "What products are available?" }
+        ],
+        suggestions: [
+            { title: "What is your return policy?", desc: "Learn about returns and exchanges", question: "What is the return policy?" },
+            { title: "When will my refund arrive?", desc: "Get details on refund timelines", question: "How long do refunds take?" },
+            { title: "How are orders delivered?", desc: "Find out about shipping and delivery", question: "Who delivers customer orders?" },
+            { title: "What products do you offer?", desc: "Explore products and availability", question: "What products are available?" }
+        ]
+    },
+    customer: {
+        endpoint: "/api/v1/hybrid-chat",
+        heading: "Customer Hybrid Assistant",
+        subheading: "Authenticated · Live MySQL Orders + Customer Knowledge Base + Memory",
+        topics: [
+            { icon: "📦", label: "My recent orders", question: "What are my recent orders and what is your return policy?" },
+            { icon: "₹", label: "Highest order total", question: "Which of my orders had the highest amount?" },
+            { icon: "↩", label: "Return eligibility", question: "How do I request a return for an order?" },
+            { icon: "⏱", label: "Refund timeline", question: "How long do refunds take after approval?" }
+        ],
+        suggestions: [
+            { title: "My orders & return policy", desc: "Live MySQL orders + KB rules", question: "What are my recent orders and what is your return policy?" },
+            { title: "Order status overview", desc: "Check processing or dispatched orders", question: "Summarize the current status of my orders." },
+            { title: "How to request a return", desc: "Step-by-step return guide", question: "How can I submit a return request?" },
+            { title: "Refund timeline", desc: "Bank & refund processing details", question: "How long do refunds take?" }
+        ]
+    },
+    seller: {
+        endpoint: "/api/v1/seller/hybrid-chat",
+        heading: "Seller Hybrid Assistant",
+        subheading: "Authenticated · Approved Seller Catalog & Stock Analytics",
+        topics: [
+            { icon: "🏷", label: "My product catalog", question: "List my approved products, selling prices in INR, and current stock quantities." },
+            { icon: "⚠", label: "Low stock alerts", question: "Which of my products have low stock or inactive status?" },
+            { icon: "₹", label: "Pricing & discounts", question: "Summarize my product selling prices and discount prices." }
+        ],
+        suggestions: [
+            { title: "List my approved products", desc: "SKUs, prices in INR & stock", question: "List my approved products, selling prices in INR, and current stock quantities." },
+            { title: "Check low stock items", desc: "Identify products needing restock", question: "Which of my products have the lowest stock?" },
+            { title: "Discount pricing overview", desc: "Review selling vs discount prices", question: "Summarize my product selling prices and discount prices." },
+            { title: "Listing status summary", desc: "Active vs inactive listings", question: "Show the listing status breakdown of my products." }
+        ]
+    },
+    support: {
+        endpoint: "/api/v1/support/hybrid-chat",
+        heading: "Support Hybrid Assistant",
+        subheading: "Authenticated · Customer Support Tickets & Order Lookup",
+        topics: [
+            { icon: "🎫", label: "Latest support tickets", question: "Summarize the latest customer support tickets and their statuses." },
+            { icon: "🔎", label: "Order ticket lookup", question: "What issue was reported for this order and what is the resolution guidance?" },
+            { icon: "📋", label: "Pending tickets", question: "Which support tickets are currently open or unresolved?" }
+        ],
+        suggestions: [
+            { title: "Summarize latest tickets", desc: "Recent customer issues & statuses", question: "Summarize the latest customer support tickets and their statuses." },
+            { title: "Open / unresolved tickets", desc: "Prioritize pending customer issues", question: "Which support tickets are still open and need action?" },
+            { title: "Inspect specific order", desc: "Enter an Order ID on the left first", question: "What is the order summary and ticket history for this order?" },
+            { title: "Resolution guidance", desc: "Review recommended support actions", question: "Summarize the resolution guidance for recent tickets." }
+        ]
+    },
+    operations: {
+        endpoint: "/api/v1/operations/hybrid-chat",
+        heading: "Operations Hybrid Assistant",
+        subheading: "Authenticated · Inventory Snapshots & Shipment Tracking",
+        topics: [
+            { icon: "📊", label: "Inventory snapshot", question: "Summarize the latest inventory snapshot across all inventory statuses." },
+            { icon: "🚚", label: "Order shipment lookup", question: "What is the shipment status, courier, and delayed flag for this order?" },
+            { icon: "⚠", label: "Reserved vs available", question: "Compare total available and reserved inventory quantities." }
+        ],
+        suggestions: [
+            { title: "Latest inventory snapshot", desc: "Available & reserved counts by status", question: "Summarize the latest inventory snapshot across all inventory statuses." },
+            { title: "Track order shipment", desc: "Enter an Order ID on the left first", question: "What is the shipment status, courier, and delayed flag for this order?" },
+            { title: "Stock health summary", desc: "Check inventory availability", question: "Compare total available and reserved inventory quantities." },
+            { title: "Delivery status overview", desc: "Courier & dispatch details", question: "Give me an operational summary of inventory readiness." }
+        ]
+    },
+    admin: {
+        endpoint: "/api/v1/admin/hybrid-chat",
+        heading: "Admin Hybrid Assistant",
+        subheading: "Authenticated · Platform-Wide System Analytics",
+        topics: [
+            { icon: "📈", label: "Platform analytics", question: "Give me an executive summary of total customers, orders, products, sellers, returns, and support tickets." },
+            { icon: "👥", label: "Customers vs sellers", question: "Compare total registered customers and sellers on the platform." },
+            { icon: "↩", label: "Returns & tickets", question: "Summarize return and support ticket volumes relative to total orders." }
+        ],
+        suggestions: [
+            { title: "Executive platform summary", desc: "All core entity totals", question: "Give me an executive summary of total customers, orders, products, sellers, returns, and support tickets." },
+            { title: "Marketplace scale", desc: "Customers, sellers & products", question: "Compare total customers, sellers, and listed products." },
+            { title: "Post-order volume", desc: "Orders, returns & support tickets", question: "Summarize order volume alongside returns and support tickets." },
+            { title: "Platform health check", desc: "High-level operational metrics", question: "Provide a concise overview of platform metrics." }
+        ]
+    }
+};
+
+function renderRoleUI(roleKey) {
+    const cfg = ROLE_CONFIG[roleKey] || ROLE_CONFIG.guest;
+    document.getElementById("panelHeading").textContent = cfg.heading;
+    document.getElementById("panelSubheading").textContent = cfg.subheading;
+
+    const topicList = document.getElementById("topicList");
+    topicList.replaceChildren();
+    cfg.topics.forEach(item => {
+        const btn = document.createElement("button");
+        btn.className = "topic-button";
+        btn.type = "button";
+        const icon = document.createElement("span");
+        icon.className = "topic-icon";
+        icon.setAttribute("aria-hidden", "true");
+        icon.textContent = item.icon;
+        const label = document.createElement("span");
+        label.className = "topic-label";
+        label.textContent = item.label;
+        btn.appendChild(icon);
+        btn.appendChild(label);
+        btn.addEventListener("click", () => ask(item.question));
+        topicList.appendChild(btn);
+    });
+
+    const suggestionsGrid = document.getElementById("suggestionsGrid");
+    suggestionsGrid.replaceChildren();
+    cfg.suggestions.forEach(item => {
+        const btn = document.createElement("button");
+        btn.className = "suggestion";
+        btn.type = "button";
+        const strong = document.createElement("strong");
+        strong.textContent = item.title;
+        const span = document.createElement("span");
+        span.textContent = item.desc;
+        btn.appendChild(strong);
+        btn.appendChild(span);
+        btn.addEventListener("click", () => ask(item.question));
+        suggestionsGrid.appendChild(btn);
+    });
+
+    const orderWrap = document.getElementById("orderFilterWrap");
+    orderWrap.hidden = !(roleKey === "support" || roleKey === "operations");
+
+    const knowledgeCopy = document.getElementById("knowledgeCopy");
+    knowledgeCopy.textContent = roleKey === "guest"
+        ? "Responses are grounded in the approved customer knowledge base, with source references when available."
+        : "Authenticated hybrid mode active: answers combine role-scoped MySQL data, Knowledge Base docs, and Supabase memory.";
+}
+
+function appendInlineMarkdown(parent, text) {
+    const tokenPattern = /(\*\*[^*]+\*\*|`[^`]+`)/g;
+    let lastIndex = 0;
+    let match;
+    while ((match = tokenPattern.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+            parent.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+        }
+        const token = match[0];
+        if (token.startsWith("**")) {
+            const strong = document.createElement("strong");
+            strong.textContent = token.slice(2, -2);
+            parent.appendChild(strong);
+        } else {
+            const code = document.createElement("code");
+            code.textContent = token.slice(1, -1);
+            parent.appendChild(code);
+        }
+        lastIndex = tokenPattern.lastIndex;
+    }
+    if (lastIndex < text.length) {
+        parent.appendChild(document.createTextNode(text.slice(lastIndex)));
+    }
+}
+
+function parseTableCells(line) {
+    return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(cell => cell.trim());
+}
+
+function isTableSeparator(line) {
+    return /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?$/.test(line.trim());
+}
+
+function renderFormattedMarkdown(container, text) {
+    const lines = String(text || "").replace(/\r\n/g, "\n").split("\n");
+    let i = 0;
+    while (i < lines.length) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        if (!trimmed) { i++; continue; }
+
+        if (/^---+$/.test(trimmed)) {
+            container.appendChild(document.createElement("hr"));
+            i++;
+            continue;
+        }
+
+        const headingMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
+        if (headingMatch) {
+            const tag = headingMatch[1].length <= 3 ? "h3" : "h4";
+            const heading = document.createElement(tag);
+            appendInlineMarkdown(heading, headingMatch[2]);
+            container.appendChild(heading);
+            i++;
+            continue;
+        }
+
+        if (trimmed.includes("|") && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
+            const table = document.createElement("table");
+            const thead = document.createElement("thead");
+            const headRow = document.createElement("tr");
+            parseTableCells(lines[i]).forEach(cell => {
+                const th = document.createElement("th");
+                appendInlineMarkdown(th, cell);
+                headRow.appendChild(th);
+            });
+            thead.appendChild(headRow);
+            table.appendChild(thead);
+            i += 2;
+
+            const tbody = document.createElement("tbody");
+            while (i < lines.length && lines[i].trim().includes("|")) {
+                const tr = document.createElement("tr");
+                parseTableCells(lines[i]).forEach(cell => {
+                    const td = document.createElement("td");
+                    appendInlineMarkdown(td, cell);
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+                i++;
+            }
+            table.appendChild(tbody);
+            container.appendChild(table);
+            continue;
+        }
+
+        if (/^[-*•]\s+/.test(trimmed)) {
+            const ul = document.createElement("ul");
+            while (i < lines.length && /^[-*•]\s+/.test(lines[i].trim())) {
+                const li = document.createElement("li");
+                appendInlineMarkdown(li, lines[i].trim().replace(/^[-*•]\s+/, ""));
+                ul.appendChild(li);
+                i++;
+            }
+            container.appendChild(ul);
+            continue;
+        }
+
+        if (/^\d+\.\s+/.test(trimmed)) {
+            const ol = document.createElement("ol");
+            while (i < lines.length && /^\d+\.\s+/.test(lines[i].trim())) {
+                const li = document.createElement("li");
+                appendInlineMarkdown(li, lines[i].trim().replace(/^\d+\.\s+/, ""));
+                ol.appendChild(li);
+                i++;
+            }
+            container.appendChild(ol);
+            continue;
+        }
+
+        const p = document.createElement("p");
+        appendInlineMarkdown(p, trimmed);
+        container.appendChild(p);
+        i++;
+    }
+}
+
+function addMessage(text, type, sources = [], timing = null) {
     const row = document.createElement("div");
     row.className = "message-row " + type;
     const avatar = document.createElement("div");
@@ -1170,25 +1591,36 @@ function addMessage(text, type, sources = []) {
     content.className = "message-content";
     const bubble = document.createElement("div");
     bubble.className = "bubble";
-    bubble.textContent = text;
+    if (type === "assistant") {
+        renderFormattedMarkdown(bubble, text);
+    } else {
+        bubble.textContent = text;
+    }
     content.appendChild(bubble);
     if (sources.length > 0) {
         const sourceBox = document.createElement("section");
         sourceBox.className = "sources";
         const heading = document.createElement("strong");
         heading.className = "sources-heading";
-        heading.textContent = "Knowledge Base Sources";
+        heading.textContent = "Sources";
         sourceBox.appendChild(heading);
         sources.forEach(source => {
             const item = document.createElement("div");
             item.className = "source-item";
-            let label = source.source || "Customer Knowledge Base";
+            const prefix = source.type === "structured_data" ? "[SQL] " : "[KB] ";
+            let label = prefix + (source.source || "Customer Knowledge Base");
             if (source.page !== null && source.page !== undefined)
                 label += " · Page " + (Number(source.page) + 1);
             item.textContent = "• " + label;
             sourceBox.appendChild(item);
         });
         content.appendChild(sourceBox);
+    }
+    if (timing) {
+        const timingDiv = document.createElement("div");
+        timingDiv.className = "meta-timing";
+        timingDiv.textContent = timing;
+        content.appendChild(timingDiv);
     }
     row.appendChild(avatar);
     row.appendChild(content);
@@ -1225,6 +1657,106 @@ function showLoading() {
     return row;
 }
 
+async function verifyToken(tokenInput) {
+    const token = (tokenInput || "").trim().replace(/^Bearer\s+/i, "");
+    const statusBox = document.getElementById("authStatus");
+    const roleBadge = document.getElementById("roleBadge");
+    const clearBtn = document.getElementById("clearTokenBtn");
+    const verifyBtn = document.getElementById("verifyTokenBtn");
+
+    if (!token) {
+        statusBox.className = "auth-status error";
+        statusBox.textContent = "Please paste a Phase I JWT token first.";
+        return;
+    }
+
+    verifyBtn.disabled = true;
+    statusBox.className = "auth-status";
+    statusBox.textContent = "Verifying token with Phase I...";
+
+    try {
+        const response = await fetch("/auth/test", {
+            method: "GET",
+            headers: { "Authorization": "Bearer " + token }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Authentication failed");
+
+        authState.token = token;
+        authState.userId = data.user_id;
+        authState.role = String(data.role || "").toLowerCase();
+        activeSessionId = null;
+        sessionStorage.setItem("rag_demo_jwt", token);
+
+        roleBadge.textContent = authState.role.toUpperCase();
+        statusBox.className = "auth-status verified";
+        statusBox.textContent = "Verified · " + authState.role.toUpperCase() + " (" + authState.userId + ")";
+        clearBtn.hidden = false;
+        renderRoleUI(authState.role);
+        document.getElementById("messages").replaceChildren(welcomePanel);
+    } catch (error) {
+        clearAuth(false);
+        statusBox.className = "auth-status error";
+        statusBox.textContent = error.message;
+    } finally {
+        verifyBtn.disabled = false;
+    }
+}
+
+function clearAuth(resetMessage = true) {
+    authState.token = "";
+    authState.userId = null;
+    authState.role = null;
+    activeSessionId = null;
+    sessionStorage.removeItem("rag_demo_jwt");
+    document.getElementById("authTokenInput").value = "";
+    document.getElementById("orderIdInput").value = "";
+    document.getElementById("roleBadge").textContent = "Guest";
+    document.getElementById("clearTokenBtn").hidden = true;
+    const statusBox = document.getElementById("authStatus");
+    if (resetMessage) {
+        statusBox.className = "auth-status";
+        statusBox.textContent = "Guest mode · Public Customer KB (/chat)";
+    }
+    renderRoleUI("guest");
+    document.getElementById("messages").replaceChildren(welcomePanel);
+}
+
+function buildRequestForActiveMode(question) {
+    if (!authState.token || !authState.role) {
+        return {
+            url: "/chat",
+            headers: { "Content-Type": "application/json" },
+            body: { question: question }
+        };
+    }
+
+    const cfg = ROLE_CONFIG[authState.role];
+    const body = { question: question, session_id: activeSessionId };
+    const orderId = document.getElementById("orderIdInput").value.trim();
+
+    if (authState.role === "customer") body.include_own_orders = true;
+    if (authState.role === "seller") body.include_own_products = true;
+    if (authState.role === "support") {
+        body.include_support_tickets = true;
+        if (orderId) body.order_id = orderId;
+    }
+    if (authState.role === "operations") {
+        body.include_inventory_overview = true;
+        if (orderId) body.order_id = orderId;
+    }
+    if (authState.role === "admin") body.include_system_analytics = true;
+
+    return {
+        url: cfg.endpoint,
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + authState.token
+        },
+        body: body
+    };
+}
+
 async function sendMessage() {
     if (isLoading) return;
     const input = document.getElementById("question");
@@ -1241,21 +1773,24 @@ async function sendMessage() {
     button.setAttribute("aria-label", "Waiting for a response");
     const loadingRow = showLoading();
     try {
-        const response = await fetch("/chat", {
+        const req = buildRequestForActiveMode(question);
+        const response = await fetch(req.url, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                question: question
-            })
+            headers: req.headers,
+            body: JSON.stringify(req.body)
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || "Request failed");
+        if (data.session_id) activeSessionId = data.session_id;
         loadingRow.remove();
-        addMessage(data.answer, "assistant", data.sources || []);
-        if (data.response_time !== undefined)
-            console.log("AI response time:", data.response_time, "seconds");
+
+        const timingParts = [];
+        if (data.retrieval_time !== undefined) timingParts.push("Retrieval " + data.retrieval_time + "s");
+        if (data.generation_time !== undefined) timingParts.push("LLM " + data.generation_time + "s");
+        if (data.response_time !== undefined) timingParts.push("Total " + data.response_time + "s");
+        if (data.session_id) timingParts.push("Session " + data.session_id.slice(0, 8));
+
+        addMessage(data.answer, "assistant", data.sources || [], timingParts.join(" · "));
     } catch (error) {
         loadingRow.remove();
         addMessage("Sorry, I could not process your request. " + error.message, "assistant");
@@ -1280,6 +1815,21 @@ function updateCharCount() {
     document.getElementById("charCount").textContent = input.value.length + " / 2000";
 }
 
+document.getElementById("verifyTokenBtn").addEventListener("click", function() {
+    verifyToken(document.getElementById("authTokenInput").value);
+});
+
+document.getElementById("authTokenInput").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        verifyToken(this.value);
+    }
+});
+
+document.getElementById("clearTokenBtn").addEventListener("click", function() {
+    clearAuth(true);
+});
+
 document.getElementById("chatForm").addEventListener("submit", function(event) {
     event.preventDefault();
     sendMessage();
@@ -1298,18 +1848,20 @@ document.getElementById("question").addEventListener("keydown", function(event) 
     }
 });
 
-document.querySelectorAll("[data-question]").forEach(button => {
-    button.addEventListener("click", function() {
-        ask(this.dataset.question);
-    });
-});
-
 document.getElementById("newChatButton").addEventListener("click", function() {
     if (isLoading) return;
+    activeSessionId = null;
     const messages = document.getElementById("messages");
     messages.replaceChildren(welcomePanel);
     document.getElementById("question").focus();
 });
+
+renderRoleUI("guest");
+const savedToken = sessionStorage.getItem("rag_demo_jwt");
+if (savedToken) {
+    document.getElementById("authTokenInput").value = savedToken;
+    verifyToken(savedToken);
+}
 </script>
 </body>
 </html>

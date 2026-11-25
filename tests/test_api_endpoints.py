@@ -38,6 +38,8 @@ def test_health_returns_200_when_supabase_and_mysql_healthy(monkeypatch):
 
 
 def test_health_returns_503_when_dependency_fails(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.delenv("RENDER", raising=False)
     monkeypatch.setattr(
         "main.check_supabase_health",
         lambda: (_ for _ in ()).throw(RuntimeError("Supabase down")),
@@ -47,6 +49,19 @@ def test_health_returns_503_when_dependency_fails(monkeypatch):
 
     assert response.status_code == 503
     assert "Supabase down" in response.json()["detail"]
+
+
+def test_health_sanitizes_503_detail_in_production(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setattr(
+        "main.check_supabase_health",
+        lambda: (_ for _ in ()).throw(RuntimeError("sensitive db host error")),
+    )
+
+    response = client.get("/health")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Service unhealthy."
 
 
 def test_seller_hybrid_chat_maps_permission_error_to_403(monkeypatch):
@@ -110,3 +125,20 @@ def test_legacy_chat_uses_generate_answer(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["answer"] == "Returns are supported."
+
+
+def test_ui_includes_phase1_token_testing_controls():
+    response = client.get("/ui")
+
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    for expected in (
+        "Phase I Token Tester",
+        "/auth/test",
+        "/api/v1/hybrid-chat",
+        "/api/v1/seller/hybrid-chat",
+        "/api/v1/support/hybrid-chat",
+        "/api/v1/operations/hybrid-chat",
+        "/api/v1/admin/hybrid-chat",
+    ):
+        assert expected in response.text

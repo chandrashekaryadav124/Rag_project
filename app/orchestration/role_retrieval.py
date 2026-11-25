@@ -60,6 +60,12 @@ def retrieve_role_data(
         if task == "tickets_by_order":
             return get_support_tickets_by_order(principal, order_id)
 
+        if task == "order_and_tickets":
+            return {
+                "order": get_support_order_summary(principal, order_id),
+                "tickets": get_support_tickets_by_order(principal, order_id),
+            }
+
     # OPERATIONS
     elif principal.role == UserRole.OPERATIONS:
         if task == "shipment_summary":
@@ -81,6 +87,12 @@ def retrieve_role_data(
 
         if task == "tickets_by_order":
             return get_support_tickets_by_order(principal, order_id)
+
+        if task == "order_and_tickets":
+            return {
+                "order": get_support_order_summary(principal, order_id),
+                "tickets": get_support_tickets_by_order(principal, order_id),
+            }
 
         if task == "shipment_summary":
             return get_shipment_summary(principal, order_id)
