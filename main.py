@@ -145,7 +145,8 @@ class AdminHybridChatRequest(BaseModel):
 # HOME ENDPOINT
 # ==========================================
 
-@app.api_route("/", methods=["GET", "HEAD"])
+@app.get("/")
+@app.head("/", include_in_schema=False)
 def home():
 
     return {
