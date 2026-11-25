@@ -1657,8 +1657,19 @@ function showLoading() {
     return row;
 }
 
+function normalizeTokenInput(rawInput) {
+    let value = (rawInput || "").trim();
+    if (value.startsWith("{")) {
+        try {
+            const parsed = JSON.parse(value);
+            value = parsed.access_token || parsed.token || parsed.jwt || value;
+        } catch (e) {}
+    }
+    return String(value).trim().replace(/^Bearer\s+/i, "").replace(/^["']+|["']+$/g, "").trim();
+}
+
 async function verifyToken(tokenInput) {
-    const token = (tokenInput || "").trim().replace(/^Bearer\s+/i, "");
+    const token = normalizeTokenInput(tokenInput);
     const statusBox = document.getElementById("authStatus");
     const roleBadge = document.getElementById("roleBadge");
     const clearBtn = document.getElementById("clearTokenBtn");
@@ -1670,6 +1681,7 @@ async function verifyToken(tokenInput) {
         return;
     }
 
+    document.getElementById("authTokenInput").value = token;
     verifyBtn.disabled = true;
     statusBox.className = "auth-status";
     statusBox.textContent = "Verifying token with Phase I...";
@@ -1680,7 +1692,12 @@ async function verifyToken(tokenInput) {
             headers: { "Authorization": "Bearer " + token }
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.detail || "Authentication failed");
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw new Error((data.detail || "Unauthorized") + " Copy a fresh access JWT (starts with eyJ...) from Phase I.");
+            }
+            throw new Error(data.detail || "Authentication failed");
+        }
 
         authState.token = token;
         authState.userId = data.user_id;
