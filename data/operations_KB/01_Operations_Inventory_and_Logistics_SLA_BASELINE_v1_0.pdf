@@ -1,0 +1,72 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [5 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 3502 >>
+stream
+BT /F2 16 Tf 54 738 Td (AI COMMERCE - Operations Logistics, Shipments & Inventory SLA) Tj ET
+BT /F1 10 Tf 54 716 Td (Project Baseline | Version 1.0 | Role Scope: OPERATIONS) Tj ET
+BT /F2 12 Tf 54 684 Td (STATUS: APPROVED FOR THE INTERNSHIP PROJECT PROTOTYPE) Tj ET
+BT /F1 10 Tf 54 666 Td (This operational guide defines shipment tracking, delay escalation, and inventory) Tj ET
+BT /F1 10 Tf 54 652 Td (snapshot procedures for the Operations role in AI Commerce.) Tj ET
+BT /F2 12 Tf 54 622 Td (1. Shipment Monitoring & Delivery Models) Tj ET
+BT /F1 10 Tf 54 604 Td (Operations tracks fulfillment via the shipments table: shipment_id, order_id,) Tj ET
+BT /F1 10 Tf 54 590 Td (warehouse_city, delivery_city, shipping_method, dispatch_date, expected_delivery_date,) Tj ET
+BT /F1 10 Tf 54 576 Td (actual_delivery_date, delivery_status, delayed_flag, and courier_name.) Tj ET
+BT /F1 10 Tf 54 554 Td (Supported delivery models are courier-partner delivery and seller-managed delivery) Tj ET
+BT /F1 10 Tf 54 540 Td (across methods such as Standard, Express, Next-Day, Same-Day, and Economy/Surface.) Tj ET
+BT /F1 10 Tf 54 518 Td (Displayed delivery dates are operational estimates unless explicitly contracted as) Tj ET
+BT /F1 10 Tf 54 504 Td (guaranteed services.) Tj ET
+BT /F2 12 Tf 54 474 Td (2. Delay Detection & Exception Handling) Tj ET
+BT /F1 10 Tf 54 456 Td (Any shipment where delayed_flag is true, or where actual_delivery_date exceeds) Tj ET
+BT /F1 10 Tf 54 442 Td (expected_delivery_date, must be prioritized for carrier follow-up.) Tj ET
+BT /F1 10 Tf 54 420 Td (Standard Exception Workflow: \(1\) Verify dispatch_date and courier scan updates with) Tj ET
+BT /F1 10 Tf 54 406 Td (courier_name; \(2\) Coordinate address corrections or reattempts if in transit; \(3\) Notify) Tj ET
+BT /F1 10 Tf 54 392 Td (Support promptly so customer tickets receive accurate status updates.) Tj ET
+BT /F1 10 Tf 54 370 Td (For lost or transit-damaged parcels, mark the exception for Support claim review and) Tj ET
+BT /F1 10 Tf 54 356 Td (reverse-logistics reconciliation.) Tj ET
+BT /F1 10 Tf 54 334 Td (Never invent courier names, carrier handoff timestamps, or unverified delivery promises.) Tj ET
+BT /F2 12 Tf 54 304 Td (3. Inventory Snapshot Governance) Tj ET
+BT /F1 10 Tf 54 286 Td (Operations monitors stock health through daily inventory_history snapshots grouped by) Tj ET
+BT /F1 10 Tf 54 272 Td (snapshot_date and inventory_status, tracking inventory_records, available_quantity, and) Tj ET
+BT /F1 10 Tf 54 258 Td (reserved_quantity.) Tj ET
+BT /F1 10 Tf 54 236 Td (available_quantity represents sellable units ready for allocation; reserved_quantity) Tj ET
+BT /F1 10 Tf 54 222 Td (represents units held for active Processing orders.) Tj ET
+BT /F1 10 Tf 54 200 Td (High reserved-to-available ratios or growing out-of-stock/damaged-hold buckets indicate) Tj ET
+BT /F1 10 Tf 54 186 Td (immediate replenishment or warehouse audit action.) Tj ET
+BT /F2 12 Tf 54 156 Td (4. Reverse Logistics & Return Routing) Tj ET
+BT /F1 10 Tf 54 138 Td (When Support verifies a damaged, defective, incorrect, or incomplete item return,) Tj ET
+BT /F1 10 Tf 54 124 Td (Operations coordinates reverse pickup with seller/platform cost allocation.) Tj ET
+BT /F1 10 Tf 54 102 Td (Returned items must be inspected at the receiving warehouse/seller facility and) Tj ET
+BT /F1 10 Tf 54 88 Td (categorized before restocking into available_quantity.) Tj ET
+BT /F1 8 Tf 54 36 Td (AI Commerce OPERATIONS Knowledge Base | Page 1 of 1) Tj ET
+endstream
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000191 00000 n 
+0000000266 00000 n 
+0000000402 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+3955
+%%EOF

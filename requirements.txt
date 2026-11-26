@@ -20,5 +20,6 @@ tokenizers
 huggingface-hub
 numpy
 
-# Testing
+# Testing & PDF Helpers
 pytest
+pypdf
