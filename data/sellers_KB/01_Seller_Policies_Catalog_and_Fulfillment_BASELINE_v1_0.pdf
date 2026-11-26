@@ -1,0 +1,108 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 3490 >>
+stream
+BT /F2 16 Tf 54 738 Td (AI COMMERCE - Seller Policies, Catalog & Fulfillment Guide) Tj ET
+BT /F1 10 Tf 54 716 Td (Project Baseline | Version 1.0 | Role Scope: SELLER) Tj ET
+BT /F2 12 Tf 54 684 Td (STATUS: APPROVED FOR THE INTERNSHIP PROJECT PROTOTYPE) Tj ET
+BT /F1 10 Tf 54 666 Td (This document establishes the project-level operational baseline for the Seller RAG) Tj ET
+BT /F1 10 Tf 54 652 Td (assistant. It is an academic/prototype reference and not a legally binding commercial) Tj ET
+BT /F1 10 Tf 54 638 Td (marketplace agreement.) Tj ET
+BT /F1 10 Tf 54 616 Td (Monetary amounts and product prices across the AI Commerce platform are expressed in) Tj ET
+BT /F1 10 Tf 54 602 Td (Indian Rupees \(INR / Rs.\).) Tj ET
+BT /F2 12 Tf 54 572 Td (1. Seller Onboarding & Approval Status) Tj ET
+BT /F1 10 Tf 54 554 Td (Sellers must complete account registration and marketplace approval before their) Tj ET
+BT /F1 10 Tf 54 540 Td (products appear in live seller queries.) Tj ET
+BT /F1 10 Tf 54 518 Td (The live MySQL sellers table tracks approval_status \(for example: approved, pending,) Tj ET
+BT /F1 10 Tf 54 504 Td (suspended\). Only approved seller accounts are returned by authorized seller catalog) Tj ET
+BT /F1 10 Tf 54 490 Td (lookups.) Tj ET
+BT /F1 10 Tf 54 468 Td (If a seller account is pending or inactive, product listings cannot be served through) Tj ET
+BT /F1 10 Tf 54 454 Td (the seller RAG catalog tool; the seller should contact platform support or admin for) Tj ET
+BT /F1 10 Tf 54 440 Td (account review.) Tj ET
+BT /F2 12 Tf 54 410 Td (2. Product Catalog, Pricing & Stock Management) Tj ET
+BT /F1 10 Tf 54 392 Td (Each approved seller manages product offers in the seller_products table linked to the) Tj ET
+BT /F1 10 Tf 54 378 Td (master products catalog. Key tracked fields include seller_product_id, product_id, sku,) Tj ET
+BT /F1 10 Tf 54 364 Td (selling_price, discount_price, stock_quantity, and listing_status.) Tj ET
+BT /F1 10 Tf 54 342 Td (Pricing Rules: All selling_price and discount_price values are stored in Indian Rupees) Tj ET
+BT /F1 10 Tf 54 328 Td (\(INR\). A valid discount_price should never exceed the listing selling_price.) Tj ET
+BT /F1 10 Tf 54 306 Td (Stock & Replenishment Guidelines: Listings with stock_quantity of 0 are treated as out) Tj ET
+BT /F1 10 Tf 54 292 Td (of stock and should be restocked or paused. Listings with stock_quantity of 1 to 10) Tj ET
+BT /F1 10 Tf 54 278 Td (units are considered low stock and recommended for proactive replenishment.) Tj ET
+BT /F1 10 Tf 54 256 Td (Listing Statuses: Only active listings should be promoted for sale; inactive or draft) Tj ET
+BT /F1 10 Tf 54 242 Td (listings require seller review before reactivation.) Tj ET
+BT /F1 10 Tf 54 220 Td (Never answer current stock, active price, or SKU counts from static documents-always) Tj ET
+BT /F1 10 Tf 54 206 Td (rely on live authenticated SQL results.) Tj ET
+BT /F2 12 Tf 54 176 Td (3. Fulfillment & Delivery Responsibilities) Tj ET
+BT /F1 10 Tf 54 158 Td (AI Commerce supports two fulfillment models: courier-partner delivery and seller-managed) Tj ET
+BT /F1 10 Tf 54 144 Td (delivery.) Tj ET
+BT /F1 10 Tf 54 122 Td (For seller-managed deliveries, the seller is responsible for timely packing, dispatch) Tj ET
+BT /F1 10 Tf 54 108 Td (confirmation, accurate tracking updates, and meeting the estimated delivery window shown) Tj ET
+BT /F1 10 Tf 54 94 Td (to the customer.) Tj ET
+BT /F1 8 Tf 54 36 Td (AI Commerce SELLER Knowledge Base | Page 1 of 2) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 2381 >>
+stream
+BT /F1 10 Tf 54 738 Td (For courier-partner deliveries, the seller must hand over properly packed parcels with) Tj ET
+BT /F1 10 Tf 54 724 Td (accurate SKU labels and invoices on schedule.) Tj ET
+BT /F1 10 Tf 54 702 Td (Shipping method labels in project data \(Standard, Express, Next-Day, Same-Day,) Tj ET
+BT /F1 10 Tf 54 688 Td (Economy/Surface\) are operational options, not universal delivery guarantees for every) Tj ET
+BT /F1 10 Tf 54 674 Td (pincode unless explicitly configured.) Tj ET
+BT /F2 12 Tf 54 644 Td (4. Customer Returns, Shipping Costs & Refund Impact) Tj ET
+BT /F1 10 Tf 54 626 Td (Under the approved project baseline, customers may submit a return request within 10) Tj ET
+BT /F1 10 Tf 54 612 Td (calendar days from the recorded delivery timestamp.) Tj ET
+BT /F1 10 Tf 54 590 Td (Only items marked returnable on the product page are eligible for change-of-mind returns) Tj ET
+BT /F1 10 Tf 54 576 Td (\(unused, undamaged, original packaging/accessories\). Customers may also submit requests) Tj ET
+BT /F1 10 Tf 54 562 Td (for damaged, defective, incorrect, or incomplete items even if opened.) Tj ET
+BT /F1 10 Tf 54 540 Td (Return Shipping Responsibility: For verified damaged, defective, incorrect, or) Tj ET
+BT /F1 10 Tf 54 526 Td (incomplete items, the project baseline assigns return logistics cost to the) Tj ET
+BT /F1 10 Tf 54 512 Td (seller/platform. For eligible change-of-mind returns, the customer bears return) Tj ET
+BT /F1 10 Tf 54 498 Td (shipping.) Tj ET
+BT /F1 10 Tf 54 476 Td (Refund Processing: Once a return is approved and initiated, the customer refund estimate) Tj ET
+BT /F1 10 Tf 54 462 Td (is 7-10 business days to the original payment method.) Tj ET
+BT /F2 12 Tf 54 432 Td (5. Seller Data Privacy & RAG Rules) Tj ET
+BT /F1 10 Tf 54 414 Td (Sellers may only query their own approved seller_products records enforced server-side) Tj ET
+BT /F1 10 Tf 54 400 Td (via authenticated user_id.) Tj ET
+BT /F1 10 Tf 54 378 Td (Sellers must never access other sellers' pricing, inventory, commission terms, or) Tj ET
+BT /F1 10 Tf 54 364 Td (private customer personal identifiers.) Tj ET
+BT /F1 10 Tf 54 342 Td (Do not invent settlement dates, commission percentages, or tax deductions not present in) Tj ET
+BT /F1 10 Tf 54 328 Td (approved documents or backend data.) Tj ET
+BT /F1 8 Tf 54 36 Td (AI Commerce SELLER Knowledge Base | Page 2 of 2) Tj ET
+endstream
+endobj
+xref
+0 9
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000127 00000 n 
+0000000197 00000 n 
+0000000272 00000 n 
+0000000408 00000 n 
+0000003949 00000 n 
+0000004085 00000 n 
+trailer
+<< /Size 9 /Root 1 0 R >>
+startxref
+6517
+%%EOF

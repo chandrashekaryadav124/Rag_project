@@ -24,13 +24,8 @@ def retrieve_authorized_documents(
 
     role = principal.role.value.upper()
 
-    if role == "CUSTOMER":
-        return retrieve_supabase_documents(
-            question=question,
-            role=role,
-            top_k=top_k
-        )
-
-    # Other role-specific knowledge bases
-    # will be connected when their approved documents are available.
-    return []
+    return retrieve_supabase_documents(
+        question=question,
+        role=role,
+        top_k=top_k,
+    )

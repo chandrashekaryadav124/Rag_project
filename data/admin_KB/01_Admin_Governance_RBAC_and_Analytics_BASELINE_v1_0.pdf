@@ -1,0 +1,84 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 3291 >>
+stream
+BT /F2 16 Tf 54 738 Td (AI COMMERCE - Admin Governance, RBAC Security & Analytics Guide) Tj ET
+BT /F1 10 Tf 54 716 Td (Project Baseline | Version 1.0 | Role Scope: ADMIN) Tj ET
+BT /F2 12 Tf 54 684 Td (STATUS: APPROVED FOR THE INTERNSHIP PROJECT PROTOTYPE) Tj ET
+BT /F1 10 Tf 54 666 Td (This reference defines platform-wide governance, role-based access control \(RBAC\), KPI) Tj ET
+BT /F1 10 Tf 54 652 Td (interpretation, and compliance rules for Admin users of AI Commerce.) Tj ET
+BT /F2 12 Tf 54 622 Td (1. Platform RBAC & Authentication Architecture) Tj ET
+BT /F1 10 Tf 54 604 Td (AI Commerce enforces five server-side roles: CUSTOMER, SELLER, SUPPORT, OPERATIONS, and) Tj ET
+BT /F1 10 Tf 54 590 Td (ADMIN.) Tj ET
+BT /F1 10 Tf 54 568 Td (In production \(APP_ENV=production or RENDER=true\), authentication is fail-closed via the) Tj ET
+BT /F1 10 Tf 54 554 Td (Phase I service \(/api/v1/auth/me\) and development header authentication is disabled.) Tj ET
+BT /F1 10 Tf 54 532 Td (Prompts are never an authorization boundary: every SQL query and vector search is scoped) Tj ET
+BT /F1 10 Tf 54 518 Td (by the verified server-side UserPrincipal.) Tj ET
+BT /F1 10 Tf 54 496 Td (All user-facing monetary metrics and reports follow Indian Rupees \(INR / Rs.\).) Tj ET
+BT /F2 12 Tf 54 466 Td (2. Role Access Matrix Summary) Tj ET
+BT /F1 10 Tf 54 448 Td (CUSTOMER: Own orders \(MySQL\) + Customer Knowledge Base.) Tj ET
+BT /F1 10 Tf 54 426 Td (SELLER: Own approved seller_products catalog \(MySQL\) + Seller Knowledge Base.) Tj ET
+BT /F1 10 Tf 54 404 Td (SUPPORT: Support tickets and order summaries \(MySQL\) + Support SOP Knowledge Base.) Tj ET
+BT /F1 10 Tf 54 382 Td (OPERATIONS: Shipment tracking and inventory snapshots \(MySQL\) + Operations Logistics &) Tj ET
+BT /F1 10 Tf 54 368 Td (Inventory Knowledge Base.) Tj ET
+BT /F1 10 Tf 54 346 Td (ADMIN: Platform-wide system analytics, support/operations drilldowns, and Admin) Tj ET
+BT /F1 10 Tf 54 332 Td (Governance Knowledge Base.) Tj ET
+BT /F2 12 Tf 54 302 Td (3. System Analytics & KPI Governance) Tj ET
+BT /F1 10 Tf 54 284 Td (Live Admin analytics aggregates total_customers, total_orders, total_products,) Tj ET
+BT /F1 10 Tf 54 270 Td (total_returns, total_support_tickets, and total_sellers.) Tj ET
+BT /F1 10 Tf 54 248 Td (Key Operational Ratios to Monitor: Return Rate \(total_returns / total_orders\) and Ticket) Tj ET
+BT /F1 10 Tf 54 234 Td (Load \(total_support_tickets / total_orders\). Rising return or ticket ratios should) Tj ET
+BT /F1 10 Tf 54 220 Td (trigger joint Support, Seller, and Operations root-cause reviews.) Tj ET
+BT /F1 10 Tf 54 198 Td (Always treat prototype dataset figures as project baseline indicators rather than) Tj ET
+BT /F1 10 Tf 54 184 Td (audited commercial financial statements.) Tj ET
+BT /F2 12 Tf 54 154 Td (4. Security, Vector Hygiene & Pre-Launch Checklist) Tj ET
+BT /F1 10 Tf 54 136 Td (No LLM-generated SQL is permitted anywhere in the application; only predefined) Tj ET
+BT /F1 10 Tf 54 122 Td (parameterized queries are executed.) Tj ET
+BT /F1 10 Tf 54 100 Td (Never ingest passwords, password hashes, API keys, JWT tokens, payment secrets, or raw) Tj ET
+BT /F1 10 Tf 54 86 Td (customer PII into vector databases.) Tj ET
+BT /F1 8 Tf 54 36 Td (AI Commerce ADMIN Knowledge Base | Page 1 of 2) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 276 >>
+stream
+BT /F1 10 Tf 54 738 Td (Before commercial launch, legal, payment-provider, seller-contract, and data-retention) Tj ET
+BT /F1 10 Tf 54 724 Td (policies must replace prototype baseline defaults.) Tj ET
+BT /F1 8 Tf 54 36 Td (AI Commerce ADMIN Knowledge Base | Page 2 of 2) Tj ET
+endstream
+endobj
+xref
+0 9
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000127 00000 n 
+0000000197 00000 n 
+0000000272 00000 n 
+0000000408 00000 n 
+0000003750 00000 n 
+0000003886 00000 n 
+trailer
+<< /Size 9 /Root 1 0 R >>
+startxref
+4212
+%%EOF

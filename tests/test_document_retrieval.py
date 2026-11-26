@@ -37,30 +37,37 @@ def test_customer_can_retrieve_documents(mock_retrieve):
     )
 
 
+@pytest.mark.parametrize(
+    "user_role, expected_filter_role",
+    [
+        (UserRole.CUSTOMER, "CUSTOMER"),
+        (UserRole.SELLER, "SELLER"),
+        (UserRole.SUPPORT, "SUPPORT"),
+        (UserRole.OPERATIONS, "OPERATIONS"),
+        (UserRole.ADMIN, "ADMIN"),
+    ],
+)
 @patch(
     "app.orchestration.document_retrieval.retrieve_supabase_documents"
 )
-def test_seller_cannot_access_customer_documents(mock_retrieve):
+def test_all_five_roles_retrieve_only_their_own_role_documents(
+    mock_retrieve,
+    user_role,
+    expected_filter_role,
+):
+    mock_retrieve.return_value = [{"content": f"{expected_filter_role} doc"}]
+
     result = retrieve_authorized_documents(
-        "return policy",
-        make_user(UserRole.SELLER)
+        "policy question",
+        make_user(user_role),
     )
 
-    assert result == []
-    mock_retrieve.assert_not_called()
-
-
-@patch(
-    "app.orchestration.document_retrieval.retrieve_supabase_documents"
-)
-def test_support_cannot_access_customer_documents(mock_retrieve):
-    result = retrieve_authorized_documents(
-        "return policy",
-        make_user(UserRole.SUPPORT)
+    assert result == [{"content": f"{expected_filter_role} doc"}]
+    mock_retrieve.assert_called_once_with(
+        question="policy question",
+        role=expected_filter_role,
+        top_k=4,
     )
-
-    assert result == []
-    mock_retrieve.assert_not_called()
 
 
 def test_inactive_user_is_rejected():
