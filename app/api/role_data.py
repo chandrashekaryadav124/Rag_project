@@ -4,20 +4,31 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.core.permissions import require_roles
 from app.core.security import UserPrincipal, UserRole
 
-from app.authorized_customer_sql import get_own_customer_orders
-from app.authorized_seller_sql import get_own_seller_products
+from app.authorized_customer_sql import (
+    get_own_customer_analytics,
+    get_own_customer_orders,
+)
+from app.authorized_seller_sql import (
+    get_own_seller_analytics,
+    get_own_seller_products,
+)
 
 from app.authorized_support_sql import (
+    get_support_analytics,
     get_support_order_summary,
     get_support_tickets,
 )
 
 from app.authorized_operations_sql import (
-    get_shipment_summary,
     get_inventory_snapshot_summary,
+    get_operations_delivery_analytics,
+    get_shipment_summary,
 )
 
-from app.authorized_admin_sql import get_system_analytics
+from app.authorized_admin_sql import (
+    get_admin_yearly_analytics,
+    get_system_analytics,
+)
 
 
 router = APIRouter(
@@ -53,6 +64,15 @@ def customer_orders(
     return _execute_role_query(get_own_customer_orders, user)
 
 
+@router.get("/customer/analytics")
+def customer_analytics(
+    user: UserPrincipal = Depends(
+        require_roles(UserRole.CUSTOMER)
+    ),
+):
+    return _execute_role_query(get_own_customer_analytics, user)
+
+
 @router.get("/seller/products")
 def seller_products(
     user: UserPrincipal = Depends(
@@ -60,6 +80,15 @@ def seller_products(
     ),
 ):
     return _execute_role_query(get_own_seller_products, user)
+
+
+@router.get("/seller/analytics")
+def seller_analytics(
+    user: UserPrincipal = Depends(
+        require_roles(UserRole.SELLER)
+    ),
+):
+    return _execute_role_query(get_own_seller_analytics, user)
 
 
 @router.get("/support/orders/{order_id}")
@@ -82,6 +111,15 @@ def support_tickets(
     return _execute_role_query(get_support_tickets, user, limit)
 
 
+@router.get("/support/analytics")
+def support_analytics(
+    user: UserPrincipal = Depends(
+        require_roles(UserRole.SUPPORT, UserRole.ADMIN)
+    ),
+):
+    return _execute_role_query(get_support_analytics, user)
+
+
 @router.get("/operations/shipments/{order_id}")
 def operations_shipments(
     order_id: str,
@@ -101,6 +139,15 @@ def operations_inventory(
     return _execute_role_query(get_inventory_snapshot_summary, user)
 
 
+@router.get("/operations/analytics")
+def operations_analytics(
+    user: UserPrincipal = Depends(
+        require_roles(UserRole.OPERATIONS, UserRole.ADMIN)
+    ),
+):
+    return _execute_role_query(get_operations_delivery_analytics, user)
+
+
 @router.get("/admin/analytics")
 def admin_analytics(
     user: UserPrincipal = Depends(
@@ -108,3 +155,12 @@ def admin_analytics(
     ),
 ):
     return _execute_role_query(get_system_analytics, user)
+
+
+@router.get("/admin/yearly-analytics")
+def admin_yearly_analytics(
+    user: UserPrincipal = Depends(
+        require_roles(UserRole.ADMIN)
+    ),
+):
+    return _execute_role_query(get_admin_yearly_analytics, user)
