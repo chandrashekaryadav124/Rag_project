@@ -1,21 +1,32 @@
 
 from app.core.security import UserPrincipal, UserRole
 
-from app.authorized_customer_sql import get_own_customer_orders
-from app.authorized_seller_sql import get_own_seller_products
+from app.authorized_customer_sql import (
+    get_own_customer_analytics,
+    get_own_customer_orders,
+)
+from app.authorized_seller_sql import (
+    get_own_seller_analytics,
+    get_own_seller_products,
+)
 
 from app.authorized_support_sql import (
+    get_support_analytics,
     get_support_order_summary,
     get_support_tickets,
     get_support_tickets_by_order,
 )
 
 from app.authorized_operations_sql import (
-    get_shipment_summary,
     get_inventory_snapshot_summary,
+    get_operations_delivery_analytics,
+    get_shipment_summary,
 )
 
-from app.authorized_admin_sql import get_system_analytics
+from app.authorized_admin_sql import (
+    get_admin_yearly_analytics,
+    get_system_analytics,
+)
 
 
 def retrieve_role_data(
@@ -44,10 +55,28 @@ def retrieve_role_data(
         if task == "own_orders":
             return get_own_customer_orders(principal, limit)
 
+        if task == "own_customer_analytics":
+            return get_own_customer_analytics(principal)
+
+        if task == "customer_hybrid_overview":
+            return {
+                "recent_orders": get_own_customer_orders(principal, limit),
+                "spending_and_returns": get_own_customer_analytics(principal),
+            }
+
     # SELLER
     elif principal.role == UserRole.SELLER:
         if task == "own_products":
             return get_own_seller_products(principal, limit)
+
+        if task == "own_seller_analytics":
+            return get_own_seller_analytics(principal)
+
+        if task == "seller_hybrid_overview":
+            return {
+                "products": get_own_seller_products(principal, limit),
+                "store_analytics": get_own_seller_analytics(principal),
+            }
 
     # SUPPORT
     elif principal.role == UserRole.SUPPORT:
@@ -56,6 +85,15 @@ def retrieve_role_data(
 
         if task == "support_tickets":
             return get_support_tickets(principal, limit)
+
+        if task == "support_analytics":
+            return get_support_analytics(principal)
+
+        if task == "support_hybrid_overview":
+            return {
+                "recent_tickets": get_support_tickets(principal, limit),
+                "ticket_analytics": get_support_analytics(principal),
+            }
 
         if task == "tickets_by_order":
             return get_support_tickets_by_order(principal, order_id)
@@ -74,13 +112,31 @@ def retrieve_role_data(
         if task == "inventory_overview":
             return get_inventory_snapshot_summary(principal)
 
+        if task == "delivery_analytics":
+            return get_operations_delivery_analytics(principal)
+
+        if task == "operations_hybrid_overview":
+            return {
+                "inventory_overview": get_inventory_snapshot_summary(principal),
+                "delivery_analytics": get_operations_delivery_analytics(principal),
+            }
+
     # ADMIN
     elif principal.role == UserRole.ADMIN:
         if task == "system_analytics":
             return get_system_analytics(principal)
 
+        if task == "admin_yearly_analytics":
+            return get_admin_yearly_analytics(principal)
+
+        if task == "admin_hybrid_overview":
+            return get_admin_yearly_analytics(principal)
+
         if task == "support_tickets":
             return get_support_tickets(principal, limit)
+
+        if task == "support_analytics":
+            return get_support_analytics(principal)
 
         if task == "order_summary":
             return get_support_order_summary(principal, order_id)
@@ -99,6 +155,9 @@ def retrieve_role_data(
 
         if task == "inventory_overview":
             return get_inventory_snapshot_summary(principal)
+
+        if task == "delivery_analytics":
+            return get_operations_delivery_analytics(principal)
 
     raise PermissionError(
         f"Task '{task}' is not permitted for role '{principal.role.value}'."

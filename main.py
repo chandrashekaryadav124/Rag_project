@@ -339,7 +339,7 @@ def authenticated_hybrid_chat(
         require_roles(UserRole.CUSTOMER)
     )
 ):
-    task = "own_orders" if request.include_own_orders else None
+    task = "customer_hybrid_overview" if request.include_own_orders else None
     return _run_hybrid_chat(
         principal=user,
         raw_question=request.question,
@@ -356,7 +356,7 @@ def authenticated_seller_hybrid_chat(
         require_roles(UserRole.SELLER)
     )
 ):
-    task = "own_products" if request.include_own_products else None
+    task = "seller_hybrid_overview" if request.include_own_products else None
     return _run_hybrid_chat(
         principal=user,
         raw_question=request.question,
@@ -389,7 +389,7 @@ def authenticated_support_hybrid_chat(
     elif order_id:
         task = "order_summary"
     elif request.include_support_tickets:
-        task = "support_tickets"
+        task = "support_hybrid_overview"
     else:
         task = None
 
@@ -424,7 +424,7 @@ def authenticated_operations_hybrid_chat(
     if order_id:
         task = "shipment_summary"
     elif request.include_inventory_overview:
-        task = "inventory_overview"
+        task = "operations_hybrid_overview"
     else:
         task = None
 
@@ -450,7 +450,7 @@ def authenticated_admin_hybrid_chat(
         require_roles(UserRole.ADMIN)
     )
 ):
-    task = "system_analytics" if request.include_system_analytics else None
+    task = "admin_hybrid_overview" if request.include_system_analytics else None
     return _run_hybrid_chat(
         principal=user,
         raw_question=request.question,
@@ -1334,82 +1334,84 @@ const ROLE_CONFIG = {
     customer: {
         endpoint: "/api/v1/hybrid-chat",
         heading: "Customer Hybrid Assistant",
-        subheading: "Authenticated · Live MySQL Orders + Customer Knowledge Base + Memory",
+        subheading: "Authenticated · Own Orders, Yearly Spend, Returns & Customer KB",
         topics: [
             { icon: "📦", label: "My recent orders", question: "What are my recent orders and what is your return policy?" },
-            { icon: "₹", label: "Highest order total", question: "Which of my orders had the highest amount?" },
-            { icon: "↩", label: "Return eligibility", question: "How do I request a return for an order?" },
+            { icon: "₹", label: "Yearly spending (YoY)", question: "Summarize my total spending by year compared to the previous year." },
+            { icon: "↩", label: "My returns & policy", question: "Show my return status and explain the 10-day return policy." },
             { icon: "⏱", label: "Refund timeline", question: "How long do refunds take after approval?" }
         ],
         suggestions: [
             { title: "My orders & return policy", desc: "Live MySQL orders + KB rules", question: "What are my recent orders and what is your return policy?" },
-            { title: "Order status overview", desc: "Check processing or dispatched orders", question: "Summarize the current status of my orders." },
-            { title: "How to request a return", desc: "Step-by-step return guide", question: "How can I submit a return request?" },
+            { title: "My spending vs previous year", desc: "Year-over-year spending summary", question: "Compare my total spending and orders across years." },
+            { title: "My returns & eligibility", desc: "Return history + policy rules", question: "Show my return records and explain return shipping rules." },
             { title: "Refund timeline", desc: "Bank & refund processing details", question: "How long do refunds take?" }
         ]
     },
     seller: {
         endpoint: "/api/v1/seller/hybrid-chat",
         heading: "Seller Hybrid Assistant",
-        subheading: "Authenticated · Approved Seller Catalog & Stock Analytics",
+        subheading: "Authenticated · Store Revenue (YoY), Customer Count, Catalog & Seller KB",
         topics: [
+            { icon: "📈", label: "3-year revenue (YoY)", question: "Show my store revenue and orders for the last 3 years compared with the previous year." },
+            { icon: "👥", label: "Store customer count", question: "How many distinct customers placed orders from my store, and how does it compare year over year?" },
             { icon: "🏷", label: "My product catalog", question: "List my approved products, selling prices in INR, and current stock quantities." },
-            { icon: "⚠", label: "Low stock alerts", question: "Which of my products have low stock or inactive status?" },
-            { icon: "₹", label: "Pricing & discounts", question: "Summarize my product selling prices and discount prices." }
+            { icon: "⚠", label: "Low stock & returns", question: "Flag low-stock products (1-10 units) and explain who covers return shipping for damaged items." }
         ],
         suggestions: [
+            { title: "3-year revenue & YoY growth", desc: "Compare store revenue vs previous year", question: "Show my store revenue and orders for the last 3 years compared with the previous year." },
+            { title: "Total customers from my store", desc: "Aggregate customer & order counts (no PII)", question: "How many customers placed orders from my store overall and by year?" },
             { title: "List my approved products", desc: "SKUs, prices in INR & stock", question: "List my approved products, selling prices in INR, and current stock quantities." },
-            { title: "Check low stock items", desc: "Identify products needing restock", question: "Which of my products have the lowest stock?" },
-            { title: "Discount pricing overview", desc: "Review selling vs discount prices", question: "Summarize my product selling prices and discount prices." },
-            { title: "Listing status summary", desc: "Active vs inactive listings", question: "Show the listing status breakdown of my products." }
+            { title: "Low stock & return policy", desc: "Catalog alerts + Seller KB rules", question: "Which of my products have low stock and who pays return shipping for damaged items?" }
         ]
     },
     support: {
         endpoint: "/api/v1/support/hybrid-chat",
         heading: "Support Hybrid Assistant",
-        subheading: "Authenticated · Customer Support Tickets & Order Lookup",
+        subheading: "Authenticated · Tickets, Ticket Trends (YoY), Order Lookup & Support SOP",
         topics: [
-            { icon: "🎫", label: "Latest support tickets", question: "Summarize the latest customer support tickets and their statuses." },
-            { icon: "🔎", label: "Order ticket lookup", question: "What issue was reported for this order and what is the resolution guidance?" },
-            { icon: "📋", label: "Pending tickets", question: "Which support tickets are currently open or unresolved?" }
+            { icon: "🎫", label: "Tickets & status summary", question: "Summarize ticket counts by status and issue type, plus the latest open tickets." },
+            { icon: "📊", label: "Yearly ticket trend", question: "Compare support ticket volume across years with previous year change." },
+            { icon: "🔎", label: "Order ticket lookup", question: "Check the order summary and tickets for this order and recommend next steps." },
+            { icon: "🛡", label: "Refund & security SOP", question: "Explain the refund timeline and what sensitive data support must never collect." }
         ],
         suggestions: [
-            { title: "Summarize latest tickets", desc: "Recent customer issues & statuses", question: "Summarize the latest customer support tickets and their statuses." },
-            { title: "Open / unresolved tickets", desc: "Prioritize pending customer issues", question: "Which support tickets are still open and need action?" },
+            { title: "Ticket breakdown & YoY trend", desc: "Counts by status, issue type & year", question: "Summarize ticket counts by status, top issue types, and yearly trend." },
+            { title: "Latest customer tickets", desc: "Recent issues & resolution guidance", question: "Summarize the latest customer support tickets and their statuses." },
             { title: "Inspect specific order", desc: "Enter an Order ID on the left first", question: "What is the order summary and ticket history for this order?" },
-            { title: "Resolution guidance", desc: "Review recommended support actions", question: "Summarize the resolution guidance for recent tickets." }
+            { title: "Return & escalation SOP", desc: "10-day window & escalation rules", question: "Explain when to escalate a ticket to Operations vs Admin." }
         ]
     },
     operations: {
         endpoint: "/api/v1/operations/hybrid-chat",
         heading: "Operations Hybrid Assistant",
-        subheading: "Authenticated · Inventory Snapshots & Shipment Tracking",
+        subheading: "Authenticated · Inventory, Courier Delays (YoY), Shipments & Ops SLA",
         topics: [
             { icon: "📊", label: "Inventory snapshot", question: "Summarize the latest inventory snapshot across all inventory statuses." },
-            { icon: "🚚", label: "Order shipment lookup", question: "What is the shipment status, courier, and delayed flag for this order?" },
-            { icon: "⚠", label: "Reserved vs available", question: "Compare total available and reserved inventory quantities." }
+            { icon: "🚚", label: "Courier & delay metrics", question: "Show overall on-time delivery rate, delayed shipments by courier, and yearly trend." },
+            { icon: "🔎", label: "Order shipment lookup", question: "What is the shipment status, courier, and delay workflow for this order?" }
         ],
         suggestions: [
+            { title: "Courier & delay analytics", desc: "On-time rate, couriers & YoY delays", question: "Show total shipments, on-time rate, courier delay breakdown, and yearly comparison." },
             { title: "Latest inventory snapshot", desc: "Available & reserved counts by status", question: "Summarize the latest inventory snapshot across all inventory statuses." },
             { title: "Track order shipment", desc: "Enter an Order ID on the left first", question: "What is the shipment status, courier, and delayed flag for this order?" },
-            { title: "Stock health summary", desc: "Check inventory availability", question: "Compare total available and reserved inventory quantities." },
-            { title: "Delivery status overview", desc: "Courier & dispatch details", question: "Give me an operational summary of inventory readiness." }
+            { title: "Delay exception SLA", desc: "Operations KB escalation workflow", question: "Explain the standard exception workflow for delayed or lost parcels." }
         ]
     },
     admin: {
         endpoint: "/api/v1/admin/hybrid-chat",
         heading: "Admin Hybrid Assistant",
-        subheading: "Authenticated · Platform-Wide System Analytics",
+        subheading: "Authenticated · Multi-Year Platform Revenue (YoY), Totals & Governance KB",
         topics: [
-            { icon: "📈", label: "Platform analytics", question: "Give me an executive summary of total customers, orders, products, sellers, returns, and support tickets." },
-            { icon: "👥", label: "Customers vs sellers", question: "Compare total registered customers and sellers on the platform." },
-            { icon: "↩", label: "Returns & tickets", question: "Summarize return and support ticket volumes relative to total orders." }
+            { icon: "📈", label: "3-year platform revenue", question: "Show platform orders, distinct customers, and revenue in INR by year with YoY comparison." },
+            { icon: "🏛", label: "Platform totals & KPIs", question: "Give an executive summary of platform totals, return rate, and ticket load." },
+            { icon: "🔐", label: "RBAC & security policy", question: "Summarize the RBAC role boundaries and vector hygiene rules." }
         ],
         suggestions: [
-            { title: "Executive platform summary", desc: "All core entity totals", question: "Give me an executive summary of total customers, orders, products, sellers, returns, and support tickets." },
-            { title: "Marketplace scale", desc: "Customers, sellers & products", question: "Compare total customers, sellers, and listed products." },
-            { title: "Post-order volume", desc: "Orders, returns & support tickets", question: "Summarize order volume alongside returns and support tickets." },
-            { title: "Platform health check", desc: "High-level operational metrics", question: "Provide a concise overview of platform metrics." }
+            { title: "Multi-year platform performance", desc: "Orders, customers & revenue YoY", question: "Show platform orders, distinct customers, and revenue in INR by year compared to the previous year." },
+            { title: "Executive platform summary", desc: "Entity totals, return rate & ticket load", question: "Give me an executive summary of total customers, orders, products, sellers, returns, and support tickets." },
+            { title: "RBAC & security governance", desc: "Admin KB rules & compliance", question: "Summarize the platform RBAC access matrix and security rules." },
+            { title: "Pre-launch checklist", desc: "Governance & policy readiness", question: "What governance checks are required before commercial launch?" }
         ]
     }
 };
